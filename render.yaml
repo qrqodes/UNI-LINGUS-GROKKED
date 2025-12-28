@@ -1,0 +1,45 @@
+services:
+  # Web service for the frontend
+  - type: web
+    name: telegram-bot-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --log-file=-
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: telegram-bot-db
+          property: connectionString
+
+  # Worker service for the Telegram bot
+  - type: worker
+    name: telegram-bot-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: telegram-bot-db
+          property: connectionString
+
+# Database
+databases:
+  - name: telegram-bot-db
+    plan: free

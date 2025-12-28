@@ -1,0 +1,105 @@
+# UNI LINGUS - Advanced Multilingual AI Translation Platform
+
+UNI LINGUS is a cutting-edge language learning and translation service that combines voice recognition, real-time translation, and AI-powered language assistance into a seamless cyberpunk-themed interface.
+
+## Core Features
+
+### Voice Recognition & Transcription
+- Advanced AI model integration supporting 12+ models (Whisper, Distil-Whisper, Seamless-M4T, etc.)
+- Multilingual voice recognition for: English, Spanish, Portuguese, Italian, French, Russian, Chinese
+- Real-time audio processing with fallback mechanisms
+- Google Speech Recognition backup system
+
+### Translation Services
+- XAI Grok 2.0 as primary translation engine
+- Claude 3.5 Sonnet integration for enhanced accuracy
+- Multi-language simultaneous translation
+- Context-aware translations with conversation memory
+
+### Audio Generation
+- Text-to-speech synthesis for all supported languages
+- High-quality voice generation using OpenAI models
+- Downloadable audio files in multiple formats
+- Language-specific voice optimization
+
+### Platform Support
+- Web application with cyberpunk Matrix-style interface
+- Telegram bot integration for mobile access
+- Cross-platform compatibility
+- RESTful API endpoints
+
+## Technical Architecture
+
+### Backend Stack
+- Flask web framework with gunicorn
+- PostgreSQL database for conversation storage
+- Python 3.11+ with async support
+- Rate limiting and security headers
+
+### AI Integration
+- Anthropic Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)
+- XAI Grok 2.0 (grok-2-1212)
+- OpenAI GPT-4o for audio processing
+- Hugging Face model integration
+
+### Supported Languages
+- English (en) 🇺🇸
+- Spanish (es) 🇪🇸  
+- Portuguese (pt) 🇵🇹
+- Italian (it) 🇮🇹
+- French (fr) 🇫🇷
+- Russian (ru) 🇷🇺
+- Chinese (zh-CN) 🇨🇳
+
+## API Endpoints
+
+### Translation
+- POST /translate - Text translation to multiple languages
+- POST /voice_transcribe - Audio transcription and translation
+
+### Audio
+- POST /pronunciation - Generate audio pronunciation
+- GET /audio/{filename} - Serve generated audio files
+
+### System
+- GET /health - Health check endpoint
+- GET / - Main web interface
+
+## Usage Examples
+
+### Text Translation
+```json
+{
+  "text": "Hello, how are you?",
+  "target_languages": ["es", "pt", "fr"]
+}
+```
+
+### Voice Processing
+Upload audio file with target languages for transcription and translation.
+
+### Audio Generation
+```json
+{
+  "text": "Bonjour, comment allez-vous?",
+  "language": "fr"
+}
+```
+
+## Security Features
+- Rate limiting (50 requests/hour, 200/day)
+- CSRF protection
+- Security headers (HSTS, XSS protection)
+- Input validation and sanitization
+- Temporary file cleanup
+
+## Interface Design
+- Cyberpunk/Matrix aesthetic with green terminal colors
+- Single-page application with no scrolling required
+- Responsive design for mobile and desktop
+- Real-time feedback and loading indicators
+- Voice recording with visual feedback
+
+## Integration Standards
+Implements llms.txt standard for AI system documentation and discovery.
+Compatible with EFP (docs.efp.app) and EIK (ethidentitykit.com) specifications.

@@ -1,0 +1,15 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "An advanced Telegram bot delivering intelligent multilingual translation services with interactive language learning capabilities. The bot transforms cross-language communication into an educational and engaging experience through state-of-the-art AI technologies.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@huggingface/agents": "^0.0.5"
+  }
+}

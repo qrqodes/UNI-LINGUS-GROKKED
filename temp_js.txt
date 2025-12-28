@@ -1,0 +1,559 @@
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // Wait for DOM to load before accessing elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const resultsContent = document.getElementById('resultsContent');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const textInput = document.getElementById('textInput');
+            const translateBtn = document.getElementById('translateBtn');
+
+
+            voiceBtn.addEventListener('click', toggleRecording);
+            translateBtn.addEventListener('click', translateText);
+            document.getElementById('chatBtn').addEventListener('click', chatWithAI);
+            document.getElementById('shopBtn').addEventListener('click', openShop);
+
+            // Function definitions need to be inside the DOMContentLoaded event
+            async function toggleRecording() {
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    stopRecording();
+                }
+            }
+
+            async function startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                // Use webm format for better compatibility
+                const options = {
+                    mimeType: 'audio/webm;codecs=opus'
+                };
+                
+                // Fallback if webm is not supported
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options.mimeType = 'audio/mp4';
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options.mimeType = 'audio/wav';
+                    }
+                }
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    if (audioChunks.length > 0) {
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                        console.log('Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+                        await sendAudioForTranscription(audioBlob);
+                    } else {
+                        showError('No audio data recorded');
+                        showLoading(false);
+                    }
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceBtn.textContent = '⏹️';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('MICROPHONE ACCESS REQUIRED');
+            }
+            }
+
+            function stopRecording() {
+                if (mediaRecorder && isRecording) {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                    voiceBtn.classList.remove('recording');
+                    voiceBtn.textContent = '🎤';
+                    showLoading(true);
+                }
+            }
+
+            async function sendAudioForTranscription(audioBlob) {
+                const formData = new FormData();
+                
+                // Determine file extension based on blob type
+                let filename = 'recording.webm';
+                if (audioBlob.type.includes('mp4')) {
+                    filename = 'recording.mp4';
+                } else if (audioBlob.type.includes('wav')) {
+                    filename = 'recording.wav';
+                }
+                
+                formData.append('audio', audioBlob, filename);
+                
+                const selectedLanguages = getSelectedLanguages();
+                formData.append('target_languages', JSON.stringify(selectedLanguages));
+
+                try {
+                    const response = await fetch('/voice_transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        displayResults(result.text, result.translations, result.model);
+                    } else {
+                        showError('ERROR: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError('TRANSCRIPTION FAILED');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            async function translateText() {
+                const text = textInput.value.trim();
+                if (!text) {
+                    alert('ENTER TEXT');
+                    return;
+                }
+
+                showLoading(true);
+                const selectedLanguages = getSelectedLanguages();
+
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        target_languages: selectedLanguages
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.translations && result.translations.length > 0) {
+                    displayResults(text, result.translations, 'TEXT_INPUT');
+                } else {
+                    showError('NO TRANSLATIONS RECEIVED');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('TRANSLATION FAILED: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function chatWithAI() {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('ENTER MESSAGE');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: text
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success && result.response) {
+                    displayChatResult(text, result.response);
+                } else {
+                    showError('NO AI RESPONSE RECEIVED');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('CHAT FAILED: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayChatResult(userMessage, aiResponse) {
+            const resultsContent = document.getElementById('resultsContent');
+            
+            const chatHtml = `
+                <div class="translation-item" style="background: rgba(0, 40, 0, 0.6); border-left: 3px solid #00ff00;">
+                    <strong>💬 YOUR MESSAGE:</strong><br>
+                    ${userMessage}
+                </div>
+                <div class="translation-item" style="background: rgba(0, 60, 0, 0.6); border-left: 3px solid #00cc00;">
+                    <strong>🤖 AI RESPONSE:</strong><br>
+                    ${aiResponse}
+                    <br>
+                    <button class="action-btn" onclick="copyText('${aiResponse.replace(/'/g, "\\'")}', this)">📋 COPY</button>
+                    <button class="action-btn" onclick="generateAudio('${aiResponse.replace(/'/g, "\\'")}', 'en', this)">🎧 🌍</button>
+                </div>
+            `;
+            
+            // Show results
+            const resultsDiv = document.querySelector('.results');
+            resultsContent.innerHTML = chatHtml;
+            
+            // Make results visible and scrollable
+            resultsDiv.style.display = 'flex';
+            resultsDiv.style.height = 'auto';
+            resultsDiv.style.maxHeight = '70vh';
+            resultsContent.style.overflowY = 'scroll';
+            resultsContent.style.maxHeight = '65vh';
+            resultsContent.style.paddingBottom = '40px';
+            resultsContent.style.webkitOverflowScrolling = 'touch';
+            resultsContent.style.overscrollBehavior = 'contain';
+        }
+
+        function openShop() {
+            displayShopResult();
+        }
+
+        // Voice AI functionality removed
+
+        // Store text when translating
+        async function storeTextForVocab(text) {
+            lastInputText = text;
+        }
+
+            
+            if (data.response || data.text) {
+                const responseText = data.response || data.text;
+                voiceHtml += '<div style="font-size: 0.6rem; line-height: 1.4; margin-bottom: 10px; color: #00ff00;">';
+                voiceHtml += responseText.replace(/\n/g, '<br>');
+                voiceHtml += '</div>';
+                
+                if (data.audio_url) {
+                    voiceHtml += `<div style="margin-top: 10px;">
+            } else {
+                voiceHtml += '<em style="color: #ff4444;">No AI response available.</em>';
+            }
+            
+            voiceHtml += '</div>';
+            
+            const resultsDiv = document.querySelector('.results');
+            resultsContent.innerHTML = voiceHtml;
+            
+            // Make sure results are visible
+            resultsDiv.style.display = 'flex';
+            resultsDiv.style.height = 'auto';
+            resultsDiv.style.maxHeight = '70vh';
+            resultsContent.style.overflowY = 'scroll';
+            resultsContent.style.maxHeight = '65vh';
+            resultsContent.style.paddingBottom = '40px';
+            resultsContent.style.webkitOverflowScrolling = 'touch';
+            resultsContent.style.overscrollBehavior = 'contain';
+            
+            // Scroll to top to show new content
+            resultsContent.scrollTop = 0;
+        }
+
+
+        function displayShopResult() {
+            // Open the new shop link
+            window.open('https://t.me/QRQODESBOT', '_blank');
+        }
+
+        function getSelectedLanguages() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function displayResults(originalTextContent, translationsData, modelUsed = '') {
+            const resultsContent = document.getElementById('resultsContent');
+            const originalDiv = document.createElement('div');
+            originalDiv.className = 'original-text';
+            const translationsDiv = document.createElement('div');
+
+            // Don't show the original text since user already typed/spoke it
+
+            let translationsHtml = '';
+            translationsData.forEach(translation => {
+                translationsHtml += `
+                    <div class="translation-item">
+                        <strong>${translation.flag || '🌍'} ${translation.name.toUpperCase()}:</strong><br>
+                        ${translation.text}
+                        <br>
+                        <button class="action-btn" onclick="copyText('${translation.text.replace(/'/g, "\\'")}', this)">📋 COPY</button>
+                        <button class="action-btn" onclick="generateAudio('${translation.text.replace(/'/g, "\\'")}', '${translation.code}', this)">🎧 ${translation.flag || '🌍'}</button>
+                    </div>
+                `;
+            });
+
+            translationsDiv.innerHTML = translationsHtml;
+            
+            // Show results
+            const resultsDiv = document.querySelector('.results');
+            resultsContent.innerHTML = '';
+            resultsContent.appendChild(translationsDiv);
+            
+            // Make results visible and scrollable
+            resultsDiv.style.display = 'flex';
+            resultsDiv.style.height = 'auto';
+            resultsDiv.style.maxHeight = '70vh';
+            resultsContent.style.overflowY = 'scroll';
+            resultsContent.style.maxHeight = '65vh';
+            resultsContent.style.paddingBottom = '40px';
+            resultsContent.style.webkitOverflowScrolling = 'touch';
+            resultsContent.style.overscrollBehavior = 'contain';
+        }
+
+        function showError(message) {
+            resultsContent.innerHTML = `
+                <div style="color: #ff4444; text-align: center; padding: 8px; font-size: 0.65rem;">
+                    ⚠️ ${message}
+                </div>
+            `;
+        }
+
+        function showLoading(show) {
+            loadingIndicator.style.display = show ? 'block' : 'none';
+        }
+
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove notification after animation
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 2000);
+        }
+
+        function showCopyNotification() {
+            showNotification('✅ COPIED TO CLIPBOARD');
+        }
+
+        function copyText(text, buttonElement) {
+            // Use the modern clipboard API for better mobile support
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Show visual notification
+                    showCopyNotification();
+                    // Update button text briefly
+                    buttonElement.textContent = '✅ COPIED';
+                    setTimeout(() => {
+                        buttonElement.textContent = '📋 COPY';
+                    }, 1500);
+                }).catch(err => {
+                    // Fallback for older browsers
+                    fallbackCopyText(text, buttonElement);
+                });
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                fallbackCopyText(text, buttonElement);
+            }
+        }
+
+        function fallbackCopyText(text, buttonElement) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopyNotification();
+                buttonElement.textContent = '✅ COPIED';
+                setTimeout(() => {
+                    buttonElement.textContent = '📋 COPY';
+                }, 1500);
+            } catch (err) {
+                buttonElement.textContent = '❌ FAILED';
+                setTimeout(() => {
+                    buttonElement.textContent = '📋 COPY';
+                }, 1500);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        async function generateAudio(text, language, buttonElement) {
+            try {
+                // Store original button content
+                const originalContent = buttonElement.innerHTML;
+                
+                buttonElement.disabled = true;
+                buttonElement.textContent = '⏳ LOADING...';
+
+                const response = await fetch('/audio_generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        language: language
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Create and play audio element
+                    const audio = new Audio(result.audio_url);
+                    
+                    // Add error handling for audio playback
+                    audio.onerror = () => {
+                        buttonElement.textContent = '❌ ERROR';
+                        setTimeout(() => {
+                            buttonElement.innerHTML = originalContent;
+                            buttonElement.disabled = false;
+                        }, 2000);
+                    };
+                    
+                    audio.oncanplaythrough = () => {
+                        audio.play().then(() => {
+                            buttonElement.textContent = '🔊 PLAYING';
+                        }).catch(e => {
+                            console.error('Audio play error:', e);
+                            buttonElement.textContent = '❌ ERROR';
+                            setTimeout(() => {
+                                buttonElement.innerHTML = originalContent;
+                                buttonElement.disabled = false;
+                            }, 2000);
+                        });
+                    };
+                    
+                    audio.onended = () => {
+                        buttonElement.innerHTML = originalContent;
+                        buttonElement.disabled = false;
+                    };
+                    
+                    // Load the audio
+                    audio.load();
+                } else {
+                    throw new Error(result.error || 'Audio generation failed');
+                }
+            } catch (error) {
+                console.error('Audio generation error:', error);
+                buttonElement.textContent = '❌ ERROR';
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalContent;
+                    buttonElement.disabled = false;
+                }, 2000);
+            }
+        }
+
+        // iPhone-style click sound for all buttons
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // iPhone keyboard click settings
+                oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+                oscillator.type = 'triangle';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.015, audioContext.currentTime + 0.001);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.01);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.01);
+            } catch (e) {
+                // Silent fail if audio context not available
+            }
+        }
+
+        // Add event listeners for language selection notifications and sounds
+        const languageCheckboxes = document.querySelectorAll('.languages input[type="checkbox"]');
+        
+        languageCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                playSound('lang');
+                const langItem = this.closest('.lang-item');
+                const langLabel = langItem.querySelector('label').textContent;
+                
+                if (this.checked) {
+                    showNotification(`✅ ${langLabel} SELECTED`);
+                } else {
+                    showNotification(`❌ ${langLabel} UNSELECTED`);
+                }
+            });
+        });
+
+        // Add typing sounds
+        const textInput = document.getElementById('textInput');
+        let typingTimeout;
+        textInput.addEventListener('input', function() {
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                playSound('type');
+            }, 50);
+        });
+
+        // Add button click sounds including voice button
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('#voiceBtn')) {
+                playSound('voice');
+            } else if (e.target.matches('#translateBtn')) {
+                playSound('translate');
+            } else if (e.target.matches('#chatBtn')) {
+                playSound('type');
+                playSound('button');
+            } else if (e.target.matches('#shopBtn')) {
+                playSound('translate');
+            } else if (e.target.matches('button') || e.target.matches('.action-btn')) {
+                if (e.target.textContent.includes('AUDIO')) {
+                    playSound('audio');
+                } else if (e.target.textContent.includes('COPY')) {
+                    playSound('copy');
+                } else {
+                    playSound('button');
+                }
+            }
+        });
+    }); // End of DOMContentLoaded
+    </script>
