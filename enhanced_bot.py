@@ -3,6 +3,7 @@ Enhanced version of the Telegram translation bot with advanced learning features
 Includes pinyin for Chinese, Latin transcription for Russian, and AI fallback.
 """
 import os
+import sys
 import json
 import time
 import logging
@@ -22,50 +23,30 @@ from telegram.ext import (
     ContextTypes, ConversationHandler, filters, CallbackContext, PicklePersistence
 )
 
-# Import enhanced modules
-from enhanced_translator import (
-    translate_to_all, detect_language,
-    ALL_LANGUAGE_CODES, DEFAULT_LANGUAGES, LANGUAGE_NAMES, get_flag_emoji
+# Import shared services (unified with web app for consistent quality)
+from shared_services import (
+    translate_text, translate_to_all_languages, generate_audio,
+    chat_with_ai, is_ai_available, get_service_status,
+    DEFAULT_LANGUAGES, LANGUAGE_NAMES, ALL_LANGUAGE_CODES, ALL_LANGUAGES,
+    get_flag_emoji, translate_to_uni, translate_from_uni
 )
 from transcription import get_transcription
-# back_translation module has been removed
-# Use the enhanced audio module for better TTS capabilities
-from enhanced_audio import generate_audio
-# Use ElevenLabs for voice generation
-from elevenlabs_voice import generate_elevenlabs_audio
+# Use shared_services for TTS (ElevenLabs → gTTS cascade)
 from audio_generation import clean_old_audio_files
 from database import db
 from ai_services_simplified import (
     generate_learning_example, generate_thematic_vocabulary,
     is_ai_service_available, query_claude
 )
-from offline_translation import (
-    translate_offline, is_language_pack_installed, get_installed_language_packs,
-    create_language_pack, generate_language_pack_file, delete_language_pack,
-    get_offline_translation_stats, generate_initial_language_pack
-)
-
-# Import advanced AI modules
+# Import advanced AI modules (music/video generation removed - not using paid APIs)
 from autoregressive_speech import (
     generate_streaming_speech, transcribe_streaming_audio,
     get_autoregressive_capabilities
-)
-from music_generation import (
-    generate_music_from_text, get_music_generation_capabilities
-)
-from video_generation import (
-    generate_video_from_text, get_video_generation_capabilities
 )
 from advanced_models import (
     enhanced_model_translation, enhanced_tts_with_parakeet,
     get_advanced_model_capabilities, initialize_memory,
     update_memory, get_enhanced_context, cleanup_old_memories
-)
-# Import offline handlers
-from offline_handlers import (
-    offline_command, handle_offline_selection, 
-    handle_offline_source_language, handle_offline_target_language,
-    AWAITING_OFFLINE_SOURCE_LANG, AWAITING_OFFLINE_TARGET_LANG
 )
 
 # Import existing modules
@@ -83,19 +64,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Mask sensitive information in httpx logs
+httpx_logger = logging.getLogger('httpx')
+httpx_logger.setLevel(logging.WARNING)  # Only show warnings/errors, not INFO requests
+
 # Get the Telegram token from environment variables
-TOKEN = "7615166585:AAGTDxjkP68NjcaVR7nE8e-p_ANUgxSgEDA"  # Hard-coded new token
+TOKEN = os.environ.get('TELEGRAM_TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
 if not TOKEN:
     logger.error("No TELEGRAM_TOKEN found in environment variables.")
-    TOKEN = "YOUR_TOKEN_HERE"  # This will cause an error if not replaced
+    sys.exit(1)  # Exit if no token is provided
 
 # Conversation states
 (
     AWAITING_TEXT, AWAITING_LANGUAGE_SELECTION, AWAITING_LEVEL_SELECTION,
     AWAITING_GAME_PAIR, AWAITING_GAME_ANSWER, AWAITING_THEME, 
-    AWAITING_CUSTOM_NOTIFICATION, AWAITING_TIME_SELECTION,
-    AWAITING_OFFLINE_SOURCE_LANG, AWAITING_OFFLINE_TARGET_LANG
-) = range(10)
+    AWAITING_CUSTOM_NOTIFICATION, AWAITING_TIME_SELECTION
+) = range(8)
 
 # Helper functions
 def get_language_keyboard(selected_langs=None):
@@ -185,81 +169,11 @@ def get_post_translation_keyboard(ai_available=True):
         
     return InlineKeyboardMarkup(keyboard)
 
-def get_offline_language_keyboard(installed_packs=None):
-    """Generate a keyboard for offline language selection."""
-    if installed_packs is None:
-        installed_packs = get_installed_language_packs()
-    
-    keyboard = []
-    
-    # Add all available language pairs
-    installed_pairs = []
-    for pack in installed_packs:
-        source = pack.get('source_language', '')
-        target = pack.get('target_language', '')
-        if source and target:
-            installed_pairs.append((source, target))
-    
-    # Sort by source language name
-    installed_pairs.sort(key=lambda x: LANGUAGE_NAMES.get(x[0], x[0]))
-    
-    # Create keyboard rows for each installed pack
-    for source, target in installed_pairs:
-        source_name = LANGUAGE_NAMES.get(source, source)
-        target_name = LANGUAGE_NAMES.get(target, target)
-        source_flag = get_flag_emoji(source)
-        target_flag = get_flag_emoji(target)
-        
-        button_text = f"{source_flag} {source_name} → {target_flag} {target_name}"
-        callback_data = f"offline_{source}_{target}"
-        
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
-    
-    # Add management buttons
-    keyboard.append([
-        InlineKeyboardButton("➕ Create Pack", callback_data="offline_create"),
-        InlineKeyboardButton("🗑️ Delete Pack", callback_data="offline_delete")
-    ])
-    
-    # Add done button
-    keyboard.append([InlineKeyboardButton("✅ Done", callback_data="offline_done")])
-    
-    return InlineKeyboardMarkup(keyboard)
-
-def get_language_selection_keyboard(exclude_langs=None, for_source=True):
-    """Generate a keyboard for language selection for offline packs."""
-    if exclude_langs is None:
-        exclude_langs = []
-        
-    keyboard = []
-    row = []
-    
-    prefix = "src" if for_source else "tgt"
-    
-    for i, lang_code in enumerate(ALL_LANGUAGE_CODES):
-        if lang_code in exclude_langs:
-            continue
-            
-        flag = get_flag_emoji(lang_code)
-        lang_name = LANGUAGE_NAMES.get(lang_code, lang_code)
-        button_text = f"{flag} {lang_name}"
-        
-        # Create rows of 2 buttons each
-        row.append(InlineKeyboardButton(button_text, callback_data=f"{prefix}_{lang_code}"))
-        
-        if i % 2 == 1 or i == len(ALL_LANGUAGE_CODES) - 1:
-            keyboard.append(row)
-            row = []
-    
-    # Add cancel button
-    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data=f"{prefix}_cancel")])
-    
-    return InlineKeyboardMarkup(keyboard)
     
 
 
 def format_translation_message(translation_data: Dict[str, Any]) -> str:
-    """Format the translation message with transcriptions."""
+    """Format the translation message. Transcriptions are already included in the text."""
     source_lang = translation_data['source_language']
     source_lang_name = translation_data['source_language_name']
     translations = translation_data['translations']
@@ -268,19 +182,18 @@ def format_translation_message(translation_data: Dict[str, Any]) -> str:
     # Start message with just the source text, without the language name prefix
     message = f"{source_text}\n\n"
     
-    # Add each translation with transcription if available
+    # Add each translation (transcriptions are already included in the text by enhanced_translator)
     for lang_code, trans_data in translations.items():
         text = trans_data['text']
-        transcription = trans_data.get('transcription')
         
         flag = get_flag_emoji(lang_code)
         lang_name = LANGUAGE_NAMES.get(lang_code, lang_code)
         
         message += f"{flag} *{lang_name}:* {text}\n"
         
-        # Add transcription if available
-        if transcription:
-            message += f"   _({transcription})_\n"
+        # Add pinyin for Chinese translations
+        if lang_code == 'zh-CN' and 'pinyin' in trans_data:
+            message += f"    📖 _{trans_data['pinyin']}_\n"
         
         message += "\n"
     
@@ -331,8 +244,17 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     flag = get_flag_emoji(lang_code)
                     
                     try:
-                        # Generate audio file
-                        audio_file = generate_audio(text, lang_code)
+                        # Clean text for audio generation (remove transliterations)
+
+                        from transliteration_utils import clean_text_for_audio
+
+                        clean_text = clean_text_for_audio(text)
+
+                        
+
+                        # Generate audio file (returns tuple: path, provider)
+                        audio_result = generate_audio(clean_text, lang_code)
+                        audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                         
                         if audio_file:
                             # Send the audio
@@ -389,9 +311,9 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         # If no translation found, check for last message
         last_message = context.user_data.get('last_message')
         if last_message:
-            # Try to detect the language
-            from enhanced_translator import detect_language
-            detected_lang = detect_language(last_message)
+            # Try to detect the language using shared services
+            from langdetect import detect
+            detected_lang = detect(last_message)
             
             # Update loading message
             await context.bot.edit_message_text(
@@ -401,8 +323,8 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             )
             
             try:
-                # Translate to all selected languages first
-                translation_result = translate_to_all(last_message, selected_langs)
+                # Translate to all selected languages using shared services (same as web app)
+                translation_result = {'translations': translate_to_all_languages(last_message, selected_langs)}
                 
                 # Store the translation for future use
                 context.user_data['last_translation'] = translation_result
@@ -421,8 +343,13 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     flag = get_flag_emoji(lang_code)
                     
                     try:
-                        # Generate audio file
-                        audio_file = generate_audio(text, lang_code)
+                        # Clean text for audio generation (remove transliterations)
+                        from transliteration_utils import clean_text_for_audio
+                        clean_text = clean_text_for_audio(text)
+
+                        # Generate audio file (returns tuple: path, provider)
+                        audio_result = generate_audio(clean_text, lang_code)
+                        audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                         
                         if audio_file:
                             # Send the audio
@@ -487,8 +414,9 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                         text=f"🔊 Generating audio for original text in {LANGUAGE_NAMES.get(detected_lang, detected_lang)}..."
                     )
                     
-                    # Generate audio for original text only
-                    audio_file = generate_audio(last_message, detected_lang)
+                    # Generate audio for original text only (returns tuple: path, provider)
+                    audio_result = generate_audio(last_message, detected_lang)
+                    audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                     
                     if audio_file:
                         # Send the audio file
@@ -563,9 +491,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Create plain keyboard buttons with forward slash for commands
     keyboard = [
-        ["/languages", "/chat"],
-        ["/translator", "/audio"],
-        ["/shop", "/vocabulary"]
+        ["/languages", "/flags"],
+        ["/chat", "/translator"],
+        ["/audio", "/shop"],
+        ["/webapp"]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
@@ -578,8 +507,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"💬 /chat - Switch to chatting with AI mode\n"
         f"🔄 /translator - Switch to translation mode\n"
         f"🔊 /audio - Generate speech\n"
-        f"🧠 /vocabulary - Extract vocabulary\n"
-        f"🛍️ /shop - Buy art 🖼️, clothes 👕 and language classes 👩‍🏫"
+        f"🛍️ /shop - Buy clothes 👕 and language classes 👩‍🏫\n"
+        f"🌐 /webapp - Open web version"
     )
     
     # Send English welcome message with keyboard
@@ -1216,8 +1145,8 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Handle the /chat command to switch to direct chat mode with AI."""
     chat_id = update.effective_chat.id
     
-    # Check if any AI service is available
-    if not is_ai_service_available():
+    # Check if any AI service is available using shared services
+    if not is_ai_available():
         await update.message.reply_text(
             "💬 *Chat Mode Unavailable*\n\n"
             "Sorry, AI services are currently unavailable. Please try again later.",
@@ -1233,9 +1162,9 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     # Create plain keyboard buttons with forward slash for commands
     keyboard = [
-        ["/languages", "/translator"],
-        ["/audio", "/vocabulary"],
-        ["/shop", "/chat"]
+        ["/languages", "/flags"],
+        ["/chat", "/translator"],
+        ["/audio", "/shop"]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
@@ -1444,21 +1373,14 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             text="🤔 Thinking..."
         )
         
-        # FULL AI CHAT MODE - Handle as intelligent conversation
+        # FULL AI CHAT MODE - Handle as intelligent conversation (using shared services, same as web app)
         try:
             # Add user message to chat history
             chat_history.append({"role": "user", "content": text})
             
-            # Respond intelligently using AI (not just translation)
-            if model == 'grok':
-                from xai import chat_with_grok
-                ai_response = chat_with_grok(chat_history, max_tokens=1000, temperature=0.7)
-            else:
-                from ai_services_simplified import query_claude
-                # Convert chat history to a single prompt for Claude
-                conversation = "\n".join([f"{msg['role'].title()}: {msg['content']}" for msg in chat_history])
-                prompt = f"Continue this conversation naturally and helpfully:\n\n{conversation}\n\nAssistant:"
-                ai_response = query_claude(prompt, max_tokens=1000, temperature=0.7)
+            # Respond using shared services (Claude 3.5 Sonnet → Groq fallback, same as web app)
+            conversation = "\n".join([f"{msg['role'].title()}: {msg['content']}" for msg in chat_history[-10:]])
+            ai_response = chat_with_ai(f"Continue this conversation naturally and helpfully:\n\n{conversation}")
             
             if ai_response:
                 # Add AI response to history
@@ -1493,26 +1415,9 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 chat_history.append({"role": "user", "content": text})
                 context.user_data['chat_history'] = chat_history
                 
-                # Generate audio file using enhanced_audio for better quality
-                try:
-                    from enhanced_audio import generate_audio
-                    audio_file = generate_audio(audio_text, 'en')
-                except Exception as e:
-                    # Fallback to direct gTTS if enhanced_audio fails
-                    import os
-                    from gtts import gTTS
-                    import uuid
-                    
-                    # Create audio directory if it doesn't exist
-                    if not os.path.exists('audio'):
-                        os.makedirs('audio')
-                    
-                    # Create unique filename for audio
-                    audio_file = f"audio/pronunciation_{uuid.uuid4()}.mp3"
-                    
-                    # Generate audio file
-                    tts = gTTS(text=audio_text, lang='en', slow=False)
-                    tts.save(audio_file)
+                # Generate audio using shared services (ElevenLabs → gTTS cascade, same as web app)
+                audio_file, provider = generate_audio(audio_text, 'en')
+                logger.info(f"Audio generated via {provider}")
                 
                 if audio_file:
                     # Create AI response
@@ -1955,7 +1860,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         return  # Skip the translation part
     
-    # Normal translation mode
+    # Normal translation mode - using shared services (same quality as web app)
     # Get user data from database
     user_data = db.get_user(chat_id)
     
@@ -1963,7 +1868,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if user_data and user_data.get('selected_languages'):
         selected_langs = json.loads(user_data['selected_languages'])
     else:
-        selected_langs = ALL_LANGUAGE_CODES
+        selected_langs = DEFAULT_LANGUAGES
     
     # Send typing action
     await context.bot.send_chat_action(chat_id=chat_id, action='typing')
@@ -1975,16 +1880,19 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     
     try:
-        # Check if AI services are available
-        ai_available = is_ai_service_available()
+        # Check if AI services are available using shared services
+        ai_available = is_ai_available()
         
-        # Translation with available AI service
+        # Translation with shared services (same cascade as web app)
         try:
-            # First detect the language
-            source_lang, confidence = detect_language(text)
+            # Detect the source language
+            from langdetect import detect, detect_langs
+            source_lang = detect(text)
+            confidence = 0.9  # langdetect doesn't provide confidence easily
             
-            # Then translate text to all selected languages
-            translations_dict = translate_to_all(text, source_lang, selected_langs)
+            # Translate to all selected languages using shared services (English first, proper ordering)
+            translations_result = translate_to_all_languages(text, selected_langs, source_lang)
+            translations_dict = {'translations': translations_result, 'source_lang': source_lang}
             
             # Log the translation structure for debugging
             logger.info(f"Translation structure: {type(translations_dict)}")
@@ -2176,7 +2084,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # Check user's flag display preference
                 show_flags = context.user_data.get('show_flags', True)
                 
-                # Format message
+                # Format message (transcriptions already included in text from enhanced_translator)
                 if lang_code == source_lang and text == source_text:
                     # For source language, just send the text without language identification
                     trans_message = text
@@ -2187,9 +2095,17 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     # Just show the translation text without flags/names
                     trans_message = text
                 
-                # Add transcription if available
-                if transcription:
-                    trans_message += f"\n_({transcription})_"
+                # Add pinyin for Chinese translations
+                if lang_code == 'zh-CN' and isinstance(trans_data, dict):
+                    pinyin = trans_data.get('pinyin')
+                    if pinyin:
+                        trans_message += f"\n📖 _{pinyin}_"
+                
+                # Add Latin transcription for Russian
+                if lang_code == 'ru' and isinstance(trans_data, dict):
+                    latin = trans_data.get('latin')
+                    if latin:
+                        trans_message += f"\n📖 _{latin}_"
                 
                 # Only add reply markup to the last translation message
                 if list(translations.keys()) and lang_code == list(translations.keys())[-1]:
@@ -2212,14 +2128,15 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Update database statistics
         db.update_translation_count(chat_id)
         
-        # Add chat button after all translations are sent
-        chat_keyboard = [
+        # Add action buttons after all translations are sent
+        action_keyboard = [
+            [InlineKeyboardButton("🎧 Hear Audio", callback_data="action_audio")],
             [InlineKeyboardButton("💬 Chat with AI", callback_data="chat_ai")]
         ]
         await context.bot.send_message(
             chat_id=chat_id,
-            text="💡 Want to discuss this further?",
-            reply_markup=InlineKeyboardMarkup(chat_keyboard)
+            text="💡 Want to do more with this text?",
+            reply_markup=InlineKeyboardMarkup(action_keyboard)
         )
         
     except Exception as e:
@@ -2242,6 +2159,7 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
     if query.data == "action_audio_ai":
         await handle_audio_ai_response(update, context)
         return
+    
     
     # Extract action type for regular translation actions
     action = query.data.replace("action_", "")
@@ -2380,63 +2298,10 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
             text=f"🔄 *Switched to Translation Mode*\n\n"
                 f"Now I'll automatically translate your messages to your selected languages:\n"
                 f"{', '.join(lang_names[:5])}{' and more...' if len(lang_names) > 5 else ''}\n\n"
-                f"Type any message to translate it, or use /askai to extract vocabulary from your messages.",
+                f"Type any message to translate it, or use /chat to talk with AI.",
             parse_mode=ParseMode.MARKDOWN
         )
         
-    elif action.startswith("vocabulary_"):
-        # Instead of reimplementing the functionality, we'll directly call the vocabulary_command
-        # function with the callback query context
-        
-        # Prepare a wrapper for the vocabulary_command by adapting the update object
-        # Create a temporary mock-update to pass to the vocabulary_command function
-        from telegram import Update
-        
-        # We need to store a reference to the original query for answering it
-        original_query = query
-        await original_query.answer()
-        
-        # Get the text to analyze (from the translated message)
-        text_to_analyze = query.message.text if query.message else None
-        
-        # Store the text to analyze in user context for the vocabulary command to find
-        if text_to_analyze:
-            if 'last_translation' not in context.user_data:
-                context.user_data['last_translation'] = {}
-            context.user_data['last_translation']['source_text'] = text_to_analyze
-        
-        # Create a more thorough wrapper update that simulates the structure needed by vocabulary_command
-        class CallbackWrapper:
-            def __init__(self, callback_query):
-                self.callback_query = callback_query
-                self.effective_chat = callback_query.message.chat if callback_query.message else None
-                
-                # Create a proper message attribute that vocabulary_command can use
-                class MessageWrapper:
-                    def __init__(self, chat_id, text):
-                        self.chat_id = chat_id
-                        self.text = text
-                        self.reply_to_message = None
-                    
-                    async def reply_text(self, text, parse_mode=None, reply_markup=None):
-                        # Forward to the real bot's send_message
-                        return await context.bot.send_message(
-                            chat_id=self.chat_id,
-                            text=text,
-                            parse_mode=parse_mode,
-                            reply_markup=reply_markup
-                        )
-                
-                # Create the message wrapper with the chat ID of the original message
-                chat_id = callback_query.message.chat.id if callback_query.message and callback_query.message.chat else None
-                self.message = MessageWrapper(chat_id, text_to_analyze) if chat_id else None
-        
-        # Create the wrapper update
-        wrapper_update = CallbackWrapper(query)
-        
-        # Call the vocabulary command with our wrapper
-        await vocabulary_command(wrapper_update, context)
-            
     elif action == "audio":
         # Handle audio generation for all languages at once
         if 'last_translation' not in context.user_data:
@@ -2464,8 +2329,15 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
                 flag = get_flag_emoji(lang_code)
                 
                 try:
-                    # Generate audio file
-                    audio_file = generate_audio(text, lang_code)
+                    # Clean text for audio generation (remove transliterations)
+
+                    from transliteration_utils import clean_text_for_audio
+
+                    clean_text = clean_text_for_audio(text)
+
+                    # Generate audio file (returns tuple: path, provider)
+                    audio_result = generate_audio(clean_text, lang_code)
+                    audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                     
                     if audio_file:
                         # Send the audio
@@ -2517,6 +2389,7 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
                 text=f"😓 Sorry, there was an error generating audio: {str(e)[:50]}"
             )
     
+    
     elif action == "learn":
         # Handle adding to learning
         if 'last_translation' not in context.user_data:
@@ -2556,38 +2429,6 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
             "📝 Choose which translation to add to your vocabulary:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-    
-    elif action == "ask_ai":
-        # Create a simulated /vocabulary command message and call the handler directly
-        # This ensures the button works exactly like the command
-        try:
-            # Save the original message text
-            if update.callback_query and update.callback_query.message:
-                # Store the message in context for the vocabulary_command to use
-                context.user_data['temp_message_for_vocabulary'] = update.callback_query.message.text
-                
-                # Create a dummy message that simulates a command
-                dummy_update = Update(
-                    update_id=update.update_id,
-                    message=Message(
-                        message_id=0,
-                        date=datetime.now(),
-                        chat=update.callback_query.message.chat,
-                        from_user=update.callback_query.from_user,
-                        text="/vocabulary",
-                        reply_to_message=update.callback_query.message
-                    )
-                )
-                
-                # Call the vocabulary_command with our dummy update
-                await vocabulary_command(dummy_update, context)
-            else:
-                # Fallback to direct call if we can't create a dummy update
-                await vocabulary_command(update, context)
-        except Exception as e:
-            logger.error(f"Error in vocabulary button handler: {e}")
-            # Fallback to original handler if simulation fails
-            await vocabulary_command(update, context)
     
     elif action == "save":
         # Handle saving/favoriting the translation
@@ -2699,6 +2540,7 @@ async def handle_action_button(update: Update, context: ContextTypes.DEFAULT_TYP
             ])
         )
 
+
 async def handle_audio_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle audio pronunciation buttons."""
     query = update.callback_query
@@ -2751,8 +2593,15 @@ async def handle_audio_button(update: Update, context: ContextTypes.DEFAULT_TYPE
                 text = translations.get(lang_code, word)
                 
                 try:
-                    # Generate audio file
-                    audio_file = generate_audio(text, lang_code)
+                    # Clean text for audio generation (remove transliterations)
+
+                    from transliteration_utils import clean_text_for_audio
+
+                    clean_text = clean_text_for_audio(text)
+
+                    # Generate audio file (returns tuple: path, provider)
+                    audio_result = generate_audio(clean_text, lang_code)
+                    audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                     
                     if audio_file:
                         # Send the audio
@@ -2816,6 +2665,11 @@ async def handle_audio_button(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Get the text for this language
     if data in translation_data['translations']:
         text = translation_data['translations'][data]['text']
+        
+        # Clean text for audio generation (remove transliterations)
+        from transliteration_utils import clean_text_for_audio
+        clean_text = clean_text_for_audio(text)
+        
         lang_name = LANGUAGE_NAMES.get(data, data)
         flag = get_flag_emoji(data)
         
@@ -2826,8 +2680,9 @@ async def handle_audio_button(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         
         try:
-            # Generate audio file
-            audio_file = generate_audio(text, data)
+            # Generate audio file using clean text (returns tuple: path, provider)
+            audio_result = generate_audio(clean_text, data)
+            audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
             
             if audio_file and os.path.exists(audio_file):
                 # Send the audio
@@ -3787,8 +3642,9 @@ async def handle_audio_ai_response(update: Update, context: ContextTypes.DEFAULT
             flag = get_flag_emoji(lang_code)
             
             try:
-                # Generate audio file
-                audio_file = generate_audio(ai_response, lang_code)
+                # Generate audio file (returns tuple: path, provider)
+                audio_result = generate_audio(ai_response, lang_code)
+                audio_file = audio_result[0] if isinstance(audio_result, tuple) else audio_result
                 
                 if audio_file:
                     # Send the audio
@@ -4030,6 +3886,24 @@ async def shop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reply_markup=reply_markup
     )
 
+async def webapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Open the web version of UNI LINGUS."""
+    keyboard = [
+        [InlineKeyboardButton("🌐 Open Web App", url="https://e715b3eb-020b-4929-b7ef-4e4dcac24fef-00-2kf8za2qvhhgm.kirk.replit.dev")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🌐 *UNI LINGUS Web App*\n\n"
+        "Access the full web version with:\n"
+        "• Advanced translation features\n"
+        "• Word definitions (click any word)\n"
+        "• Voice synthesis\n"
+        "• Full language support\n\n"
+        "Click the button below to open:",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=reply_markup
+    )
 
 
 async def handle_asr_model_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -4112,11 +3986,6 @@ async def handle_asr_model_callback(update: Update, context: ContextTypes.DEFAUL
             text="❌ Model selection failed. Please try again."
         )
 
-# makemusic_command removed as requested
-
-# makevideo_command removed as requested
-
-# streamvoice_command removed as requested
 
 def main() -> None:
     """Start the enhanced bot."""
@@ -4135,12 +4004,12 @@ def main() -> None:
     application.add_handler(CommandHandler("history", history_command))
     
     # Only keeping the AI and chat command handlers, removing translate command
-    application.add_handler(CommandHandler("vocabulary", vocabulary_command))
     application.add_handler(CommandHandler("chat", chat_command))
     application.add_handler(CommandHandler("translator", translator_command))
     application.add_handler(CommandHandler("audio", audio_command))
     application.add_handler(CommandHandler("flags", flags_command))
     application.add_handler(CommandHandler("shop", shop_command))
+    application.add_handler(CommandHandler("webapp", webapp_command))
 
     
     # Advanced AI feature commands removed as requested
@@ -4162,7 +4031,10 @@ def main() -> None:
         states={
             AWAITING_LANGUAGE_SELECTION: [CallbackQueryHandler(handle_language_selection, pattern=r"^toggle_")]
         },
-        fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+        fallbacks=[
+            CommandHandler("cancel", lambda u, c: ConversationHandler.END),
+            CommandHandler("languages", languages_command)  # Allow restarting the language selection
+        ]
     ))
     
     # Removed level and theme conversation handlers
@@ -4301,24 +4173,31 @@ def main() -> None:
                         selected_languages = json.loads(user_data['selected_languages'])
                     
                     if selected_languages:
-                        from enhanced_translator import translate_to_all
-                        translations = translate_to_all(transcription, 'en', selected_languages)
+                        # Use shared services (same quality as web app)
+                        translations_data = translate_to_all_languages(transcription, selected_languages)
+                        translations = {'translations': translations_data}
                         
-                        # Format and send translation
-                        if translations and 'translations' in translations:
-                            translation_text = f"🎤 **Voice:** {transcription}\n\n"
+                        # Format and send translation with transliteration support
+                        if translations_data:
+                            # Detect language for display
+                            from langdetect import detect
+                            detected_lang = detect(transcription)
+                            transcription_display = transcription
+                            
+                            translation_text = f"🎤 **Voice ({detected_lang.upper()}):** {transcription_display}\n\n"
                             for lang_code in selected_languages:
-                                if lang_code in translations['translations']:
-                                    trans_data = translations['translations'][lang_code]
+                                if lang_code in translations_data:
+                                    trans_data = translations_data[lang_code]
                                     if isinstance(trans_data, dict) and 'text' in trans_data:
                                         translation = trans_data['text']
                                     else:
                                         translation = str(trans_data)
                                     
                                     if translation and translation != transcription:
-                                        from enhanced_translator import get_flag_emoji
                                         flag = get_flag_emoji(lang_code)
-                                        translation_text += f"{flag} **{lang_code.upper()}:** {translation}\n"
+                                        # Use translation as-is (transcriptions already included)
+                                        translation_display = translation
+                                        translation_text += f"{flag} **{lang_code.upper()}:** {translation_display}\n"
                             
                             await context.bot.edit_message_text(
                                 chat_id=chat_id,
@@ -4968,21 +4847,21 @@ def main() -> None:
                         'effective_user': update.effective_user
                     })()
                     
-                    # Process the transcription with translation
-                    from enhanced_translator import translate_text_with_fallback, get_language_name
+                    # Process the transcription using shared services (same quality as web app)
                     user_data = context.user_data or {}
                     target_languages = user_data.get('target_languages', ['en', 'es', 'fr', 'zh-CN', 'ru'])
                     
-                    # Translate the transcribed text
-                    translations_dict = translate_text_with_fallback(transcription, target_languages)
+                    # Translate using shared services
+                    translations_dict = translate_to_all_languages(transcription, target_languages)
                     
                     # Format and send the translation results
                     response_lines = [f"🎤 Voice: {transcription}\n"]
                     
-                    for lang_code, translation in translations_dict.items():
+                    for lang_code, trans_data in translations_dict.items():
+                        translation = trans_data.get('text', '') if isinstance(trans_data, dict) else str(trans_data)
                         if translation and translation.strip():
-                            lang_name = get_language_name(lang_code)
-                            flag = {"en": "🇺🇸", "es": "🇪🇸", "fr": "🇫🇷", "zh-CN": "🇨🇳", "ru": "🇷🇺"}.get(lang_code, "🌍")
+                            lang_name = LANGUAGE_NAMES.get(lang_code, lang_code)
+                            flag = get_flag_emoji(lang_code)
                             response_lines.append(f"{flag} {lang_name}: {translation}")
                     
                     # Send the complete translation response
@@ -5097,31 +4976,22 @@ def main() -> None:
         ("start", "Start the bot"),
         ("languages", "Select languages to translate to"),
         ("audio", "Generate speech from last message"),
-        ("vocabulary", "Extract vocabulary from your last message"),
         ("chat", "Chat directly with AI"),
         ("translator", "Switch back to translation mode"),
         ("flags", "Toggle language flags and names in translations"),
-        ("shop", "Browse our language learning shop"),
-        ("stats", "View your usage statistics")
+        ("shop", "Browse our language learning shop")
     ]
     
-    # We'll use an async function to set the commands at startup
-    async def set_commands():
+    # We'll use post_init to set commands after bot is initialized
+    async def post_init(application):
         try:
-            # Update commands list globally for all users
             await application.bot.set_my_commands(commands)
             logger.info("Bot commands menu updated successfully")
         except Exception as e:
             logger.error(f"Error updating bot commands menu: {e}")
-            
-    # Schedule the command setting to run when the application starts
-    application.job_queue.run_once(
-        lambda context: asyncio.create_task(set_commands()),
-        when=1  # Run 1 second after startup
-    )
     
-    # Start the Bot
-    application.run_polling()
+    # Start the Bot with post_init callback
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
