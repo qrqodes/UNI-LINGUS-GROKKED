@@ -1,0 +1,3221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNI LINGUS</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+        
+        // Configure Xenova environment
+        env.allowRemoteModels = true;
+        env.allowLocalModels = false;
+        
+        // Global Xenova pipelines
+        window.xenovaPipelines = {};
+        window.xenovaReady = false;
+        
+        // Initialize language detection pipeline with fallback
+        async function initXenova() {
+            try {
+                console.log('Loading Xenova language detection...');
+                // Use smaller, more reliable model for better performance
+                window.xenovaPipelines.langDetect = await pipeline('text-classification', 'Xenova/distilbert-base-multilingual-cased');
+                
+                window.xenovaReady = true;
+                console.log('Xenova AI models loaded successfully');
+                
+                // Notify UI that AI is ready
+                if (typeof updateXenovaStatus === 'function') {
+                    updateXenovaStatus(true);
+                }
+            } catch (error) {
+                console.error('Xenova initialization failed:', error);
+                // Graceful fallback - continue without client-side AI
+                window.xenovaReady = false;
+                console.log('Continuing without client-side AI - server-side processing available');
+            }
+        }
+        
+        // Start loading models
+        initXenova();
+        
+        // Expose functions globally
+        window.detectLanguageXenova = async function(text) {
+            if (!window.xenovaReady || !text) return null;
+            try {
+                const result = await window.xenovaPipelines.langDetect(text);
+                return result[0]?.label || null;
+            } catch (error) {
+                console.error('Language detection failed:', error);
+                return null;
+            }
+        };
+        
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            width: 100vw;
+        }
+        
+        /* Mobile body adjustments */
+        @media (max-width: 768px) {
+            body {
+                overflow-y: auto !important;
+                height: auto !important;
+                min-height: 100vh !important;
+                padding-bottom: 200px !important;
+            }
+        }
+        
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, #001100 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, #001100 0%, transparent 50%),
+                linear-gradient(135deg, #000000 0%, #001100 100%);
+            z-index: -1;
+        }
+        
+        .container {
+            height: 100vh;
+            width: 100vw;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Mobile container adjustments */
+        @media (max-width: 768px) {
+            .container {
+                height: auto !important;
+                min-height: 100vh !important;
+                overflow: visible !important;
+                padding-bottom: 200px !important;
+            }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .bot-button {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #fff;
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .bot-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        }
+
+
+
+
+
+        
+        .logo {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            flex: 0;
+            margin-right: auto;
+        }
+        
+        .translation-text {
+            font-size: 18px;
+            font-weight: 500;
+            color: #ffffff;
+            margin: 8px 0;
+            word-wrap: break-word;
+            background: rgba(0,0,0,0.7);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        
+        .clickable-word {
+            cursor: pointer;
+            color: inherit;
+        }
+        
+        .cjk-char {
+            display: inline;
+            margin: 0;
+            padding: 0;
+            letter-spacing: 0;
+        }
+        
+        body.light-mode .translation-text {
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #d0dbe7;
+        }
+        
+        body.light-mode .translation-text .clickable-word {
+            color: #000000 !important;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100%;
+        }
+        
+        .top-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        
+        .text-input {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #fff;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        
+        .mic-button {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            background: #2563eb;
+            border: none;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 10;
+            transition: all 0.2s ease;
+            color: white;
+        }
+        
+        .mic-button:hover {
+            background: #1d4ed8;
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .mic-button.recording {
+            background: #dc2626 !important;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.1); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+        
+        /* Modal animations */
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .word-definition-modal {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        .word-definition-modal > div {
+            animation: modalFadeIn 0.4s ease-out;
+        }
+        
+        .languages {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #fff;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .results {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #fff;
+            border-radius: 4px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 0;
+            min-height: 200px;
+            max-height: 70vh;
+            position: relative;
+        }
+        
+        #resultsContent {
+            flex: 1;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding-right: 4px;
+            max-height: 65vh;
+        }
+        
+        .form-select, .form-control, .btn {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #fff;
+            color: #fff;
+            border-radius: 3px;
+            padding: 3px 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .btn {
+            background: rgba(0, 0, 0, 0.8);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            padding: 8px 12px;
+            font-size: 0.7rem;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            color: #fff;
+        }
+        
+        .lang-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            height: auto;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            overflow-x: auto;
+        }
+        
+        .right-column .lang-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            flex-wrap: wrap;
+            overflow-x: visible;
+        }
+        
+        .lang-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 6px;
+            font-size: 0.6rem;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 28px;
+            font-weight: bold;
+            flex-shrink: 0;
+            white-space: nowrap;
+            min-width: 50px;
+        }
+        
+        .lang-item:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: #fff;
+        }
+        
+        .lang-item input {
+            accent-color: #fff;
+            margin: 0;
+            transform: scale(0.7);
+            position: absolute;
+            top: 2px;
+            left: 2px;
+        }
+        
+        .lang-item label {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.5rem;
+            padding-left: 12px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .translation-item {
+            background: rgba(0, 0, 0, 0.6);
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            font-size: 0.68rem;
+            position: relative;
+            min-height: 50px;
+        }
+        
+        .translation-item:hover {
+            border-color: #fff;
+        }
+        
+        .action-btn {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .stop-btn {
+            background: rgba(100, 0, 0, 0.8) !important;
+            color: #ff4444 !important;
+            border: 1px solid #ff4444 !important;
+        }
+        
+        .stop-btn:hover {
+            background: rgba(150, 0, 0, 0.9) !important;
+            color: #ff6666 !important;
+            border: 1px solid #ff6666 !important;
+        }
+        
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+        
+
+        
+        .section-title {
+            color: #fff;
+            font-size: 0.65rem;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 10px;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+                height: auto !important;
+                padding: 10px !important;
+                margin-bottom: 250px !important;
+            }
+            
+            .left-column {
+                order: 1;
+                margin-bottom: 15px;
+            }
+            
+            .right-column {
+                order: 2;
+                min-height: 400px !important;
+                margin-bottom: 50px !important;
+            }
+            
+            .results {
+                min-height: 350px !important;
+                max-height: none !important;
+                margin-bottom: 100px !important;
+                padding-bottom: 100px !important;
+            }
+            
+            #resultsContent {
+                max-height: none !important;
+                min-height: 300px !important;
+                padding-bottom: 100px !important;
+            }
+            
+            .text-input textarea {
+                min-height: 120px !important;
+                font-size: 16px !important;
+            }
+            
+            .header {
+                padding: 8px 15px !important;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .logo {
+                font-size: 1.2rem !important;
+                order: 1;
+                flex: none;
+            }
+            
+            .header > div:last-child {
+                order: 2;
+                flex: none;
+            }
+            
+            .btn {
+                font-size: 0.6rem !important;
+                padding: 6px 8px !important;
+            }
+            
+            .translation-item {
+                margin-bottom: 8px !important;
+                padding: 8px !important;
+            }
+            
+            .action-btn {
+                font-size: 10px !important;
+                padding: 6px 8px !important;
+                margin: 1px !important;
+            }
+            
+            /* CRITICAL: Ensure all UNI translation content is accessible */
+            .translation-results,
+            .chat-conversation,
+            .language-response {
+                margin-bottom: 30px !important;
+                padding-bottom: 30px !important;
+            }
+            
+            /* Add extra space after the last translation item */
+            .translation-item:last-child,
+            .language-response:last-child {
+                margin-bottom: 150px !important;
+                padding-bottom: 50px !important;
+            }
+        }
+
+        /* Tablet responsive */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .main-container {
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .results {
+                min-height: 300px;
+            }
+        }
+        
+        /* Light Mode Beautiful Styling */
+        body.light-mode {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%) !important;
+            color: #2c3e50 !important;
+        }
+        
+        body.light-mode .matrix-bg {
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 50%, #c4d4e8 100%) !important;
+        }
+        
+        body.light-mode .text-input {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 2px solid #d0dbe7 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        body.light-mode .form-control {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border: 1px solid #d0dbe7 !important;
+            color: #2c3e50 !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+        }
+        
+        body.light-mode .form-control:focus {
+            outline: none;
+            border-color: #5dade2 !important;
+            box-shadow: 0 0 0 3px rgba(93, 173, 226, 0.1) !important;
+        }
+        
+        body.light-mode .languages {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid #d0dbe7 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        body.light-mode .results {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #d0dbe7 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+            color: #2c3e50 !important;
+        }
+        
+        body.light-mode .section-title {
+            color: #34495e !important;
+            text-shadow: none !important;
+        }
+        
+        body.light-mode .btn {
+            background: linear-gradient(135deg, rgba(93, 173, 226, 0.1) 0%, rgba(149, 165, 166, 0.05) 100%) !important;
+            border: 1px solid #bdc3c7 !important;
+            color: #2c3e50 !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        body.light-mode .btn:hover {
+            background: linear-gradient(135deg, rgba(93, 173, 226, 0.2) 0%, rgba(149, 165, 166, 0.1) 100%) !important;
+            box-shadow: 0 4px 12px rgba(93, 173, 226, 0.25) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        body.light-mode .lang-item {
+            background: rgba(255, 255, 255, 0.8) !important;
+            border: 1px solid #d0dbe7 !important;
+            color: #2c3e50 !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        body.light-mode .lang-item:hover {
+            background: rgba(93, 173, 226, 0.08) !important;
+            border-color: #5dade2 !important;
+            box-shadow: 0 2px 8px rgba(93, 173, 226, 0.15) !important;
+        }
+        
+        body.light-mode .translation-item {
+            background: #ffffff !important;
+            border: 1px solid #d0dbe7 !important;
+            color: #000000 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        body.light-mode .translation-item:hover {
+            border-color: #5dade2 !important;
+            box-shadow: 0 4px 12px rgba(93, 173, 226, 0.15) !important;
+            background: #f8f9fa !important;
+        }
+        
+        body.light-mode .action-btn {
+            background: linear-gradient(135deg, rgba(93, 173, 226, 0.15) 0%, rgba(52, 152, 219, 0.1) 100%) !important;
+            border: 1px solid #5dade2 !important;
+            color: #2c3e50 !important;
+            box-shadow: 0 2px 4px rgba(93, 173, 226, 0.1) !important;
+        }
+        
+        body.light-mode .action-btn:hover {
+            background: linear-gradient(135deg, rgba(93, 173, 226, 0.25) 0%, rgba(52, 152, 219, 0.2) 100%) !important;
+            box-shadow: 0 4px 12px rgba(93, 173, 226, 0.25) !important;
+        }
+        
+        body.light-mode .logo {
+            color: #000000 !important;
+        }
+        
+        body.light-mode .bot-button {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #bdc3c7 !important;
+            color: #2c3e50 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        body.light-mode .bot-button:hover {
+            background: rgba(93, 173, 226, 0.1) !important;
+            box-shadow: 0 4px 15px rgba(93, 173, 226, 0.2) !important;
+        }
+        
+        body.light-mode .mic-button {
+            background: linear-gradient(135deg, #5dade2 0%, #3498db 100%) !important;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3) !important;
+        }
+        
+        body.light-mode .mic-button:hover {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+            box-shadow: 0 6px 16px rgba(41, 128, 185, 0.4) !important;
+        }
+        
+        body.light-mode #languagesPanel,
+        body.light-mode #historyPanel {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #d0dbe7 !important;
+            color: #2c3e50 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        body.light-mode #loadingIndicator {
+            color: #2c3e50 !important;
+        }
+        
+        /* Light Mode UNI Grammar Modal */
+        body.light-mode #uniGrammarModal {
+            background: rgba(255, 255, 255, 0.95) !important;
+        }
+        
+        body.light-mode #uniGrammarModal > div {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%) !important;
+            color: #2c3e50 !important;
+            border: 1px solid #bdc3c7 !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        body.light-mode #uniGrammarModal > div > div:first-child {
+            background: linear-gradient(135deg, #ffffff 0%, #ecf0f1 100%) !important;
+            border-bottom: 2px solid #d0dbe7 !important;
+            color: #2c3e50 !important;
+        }
+        
+        body.light-mode #uniGrammarModal h2 {
+            color: #2c3e50 !important;
+        }
+        
+        body.light-mode #uniGrammarModal button {
+            border: 1px solid #5dade2 !important;
+            color: #2c3e50 !important;
+            background: rgba(93, 173, 226, 0.1) !important;
+        }
+        
+        body.light-mode #uniGrammarModal button:hover {
+            background: rgba(93, 173, 226, 0.2) !important;
+        }
+        
+        /* Light Mode for Verb Comparison Boxes */
+        body.light-mode #uniGrammarModal div[style*="background: #111"],
+        body.light-mode #uniGrammarModal div[style*="background:#111"] {
+            background: #ffffff !important;
+            border-color: #d0dbe7 !important;
+            color: #000000 !important;
+        }
+        
+        body.light-mode #uniGrammarModal strong[style*="color: #87CEEB"] {
+            color: #2980b9 !important;
+        }
+        
+        body.light-mode #uniGrammarModal strong[style*="color: #FFD700"] {
+            color: #d68910 !important;
+        }
+        
+        /* Light mode verb boxes - catch all dark backgrounds */
+        body.light-mode #uniGrammarModal div {
+            color: #000000 !important;
+        }
+        
+        body.light-mode #uniGrammarModal .verb-box,
+        body.light-mode #uniGrammarModal [style*="background: #111"],
+        body.light-mode #uniGrammarModal [style*="background:#111"],
+        body.light-mode #uniGrammarModal [style*="background: rgb(17, 17, 17)"] {
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #d0dbe7 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">UNI LINGUS</div>
+            <div style="display: flex; gap: 8px;">
+                <button id="lightModeBtn" class="btn" onclick="toggleLightMode()" title="Toggle Light/Dark Mode" style="padding: 6px 10px; font-size: 18px;">💡</button>
+                <a href="https://t.me/UniLingaBot" target="_blank" class="bot-button">
+                    🤖 BOT
+                </a>
+            </div>
+        </div>
+        
+        <div class="main-container">
+            <div class="left-column">
+                <div style="background: transparent; border: none; padding: 0;">
+                    <div class="input-wrapper">
+                        <textarea id="textInput" class="form-control" rows="8" placeholder="Type here" style="font-size: 16px !important;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 3px; margin-top: 8px;">
+                        <button id="languagesBtn" class="btn" style="flex: 0.7;" onclick="toggleLanguages()">🇺🇸 LANGUAGES</button>
+                        <button id="chatBtn" class="btn" style="flex: 0.8;">🤖 ASK AI</button>
+                        <button id="clearBtn" class="btn" style="flex: 0.5;" onclick="clearText()">🧽 CLEAR</button>
+                        <button id="pasteBtn" class="btn" style="flex: 0.5;" onclick="pasteText()">📋 PASTE</button>
+                        <button onclick="showUniGrammarModal()" class="btn" style="flex: 1; background: #000; border: 1px solid #fff; color: #fff;">📚 UNI GRAMMAR</button>
+                    </div>
+                    <div id="loadingIndicator" style="display: none; text-align: center; margin-top: 8px; color: #fff;">
+                        <div style="display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255, 255, 255, 0.1); border-top: 2px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        Processing...
+                    </div>
+                    <div id="historyPanel" style="display: none; background: rgba(0, 0, 0, 0.8); border: 1px solid #fff; border-radius: 4px; margin-top: 8px; max-height: 200px; overflow-y: auto;">
+                        <div style="padding: 8px; color: #fff; font-size: 0.6rem; border-bottom: 1px solid rgba(255, 255, 255, 0.3);">📜 INPUT HISTORY</div>
+                        <div id="historyContent" style="padding: 8px; font-size: 0.55rem;">
+                            <div style="color: #fff; text-align: center;">No history yet</div>
+                        </div>
+                    </div>
+                    <div id="languagesPanel" style="display: none; background: rgba(0, 0, 0, 0.8); border: 1px solid #fff; border-radius: 4px; margin-top: 8px; max-height: 200px; overflow-y: auto;">
+                        <div style="padding: 8px; color: #fff; font-size: 0.6rem; border-bottom: 1px solid rgba(255, 255, 255, 0.3);">🇺🇸 LANGUAGES</div>
+                        <div id="languagesContent" style="padding: 8px; font-size: 0.55rem;">
+                            <div class="lang-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <div class="lang-item">
+                                    <input type="checkbox" value="en" id="lang-en" checked>
+                                    <label for="lang-en" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇺🇸 English</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="es" id="lang-es" checked>
+                                    <label for="lang-es" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇪🇸 Spanish</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="pt" id="lang-pt" checked>
+                                    <label for="lang-pt" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇵🇹 Portuguese</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="it" id="lang-it" checked>
+                                    <label for="lang-it" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇮🇹 Italian</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="fr" id="lang-fr" checked>
+                                    <label for="lang-fr" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇫🇷 French</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="ru" id="lang-ru">
+                                    <label for="lang-ru" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🇷🇺 Russian</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="de" id="lang-de">
+                                    <label for="lang-de" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🇩🇪 German</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="zh-CN" id="lang-zh" checked>
+                                    <label for="lang-zh" style="color: #fff; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 2px;"><span class="lang-check">✅</span> 🇨🇳 Chinese</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="ja" id="lang-ja">
+                                    <label for="lang-ja" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🇯🇵 Japanese</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="ko" id="lang-ko">
+                                    <label for="lang-ko" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🇰🇷 Korean</label>
+                                </div>
+                                <div class="lang-item">
+                                    <input type="checkbox" value="ar" id="lang-ar">
+                                    <label for="lang-ar" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🇸🇦 Arabic</label>
+                                </div>
+                                <div class="lang-item" title="UNI language - click to enable advanced translations">
+                                    <input type="checkbox" value="uni" id="lang-uni">
+                                    <label for="lang-uni" style="color: #aaa; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 2px; cursor: pointer;"><span class="lang-check" style="display: none;">✅</span> 🏳️ UNI Language</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="results" style="flex: 1;">
+                    <div class="section-title">Translation Results</div>
+                    <div id="resultsContent" style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var loadingIndicator;
+        var globalAudioInstances = {};
+        
+        // Background AI analysis cache
+        var aiAnalysisCache = {
+            regularAI: { pending: false, result: null, text: '', languages: [] },
+            enhancedAI: { pending: false, result: null, text: '', languages: [] }
+        };
+
+        function showLoading(show) {
+            if (loadingIndicator) {
+                loadingIndicator.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var translateBtn = document.getElementById('translateBtn');
+            var chatBtn = document.getElementById('chatBtn');
+            // shopBtn removed - element doesn't exist in current template
+            var textInput = document.getElementById('textInput');
+            loadingIndicator = document.getElementById('loadingIndicator');
+
+            if (translateBtn) translateBtn.addEventListener('click', translateText);
+            if (chatBtn) chatBtn.addEventListener('click', chatWithAI);
+            // shopBtn event listener removed to fix JavaScript error
+            
+            // Auto-translate and AI analysis while typing with debounce
+            var autoTranslateTimeout;
+            var aiAnalysisTimeout;
+            if (textInput) {
+                textInput.addEventListener('input', function() {
+                    clearTimeout(autoTranslateTimeout);
+                    clearTimeout(aiAnalysisTimeout);
+                    var text = textInput.value.trim();
+                    
+                    if (text.length > 2) { // Start auto-translation after 3 characters
+                        autoTranslateTimeout = setTimeout(function() {
+                            translateText();
+                        }, 1000); // Wait 1 second after user stops typing
+                        
+                        // Start background AI analysis immediately when text exists
+                        aiAnalysisTimeout = setTimeout(function() {
+                            startBackgroundAIAnalysis(text);
+                        }, 300); // Start AI analysis 300ms after typing stops
+                    } else if (text.length === 0) {
+                        // Clear results when input is empty
+                        var resultsContent = document.getElementById('resultsContent');
+                        resultsContent.innerHTML = '';
+                        // Clear AI cache
+                        aiAnalysisCache.regularAI = { pending: false, result: null, text: '', languages: [] };
+                        aiAnalysisCache.enhancedAI = { pending: false, result: null, text: '', languages: [] };
+                    }
+                });
+            }
+            
+            // Add language selection notifications
+            var languageCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            languageCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    var label = this.nextElementSibling.textContent;
+                    if (this.checked) {
+                        showNotification('✅ ' + label + ' SELECTED');
+                    } else {
+                        showNotification('❌ ' + label + ' DESELECTED');
+                    }
+                });
+            });
+
+
+
+            function translateText() {
+                var text = textInput.value.trim();
+                if (!text) {
+                    alert('Please enter text to translate');
+                    return;
+                }
+
+                // Store context for UNI corrections
+                window.lastInputText = text;
+                window.lastSelectedLanguages = getSelectedLanguages();
+
+                // Add to history
+                addToHistory(text);
+                
+                showLoading(true);
+                var selectedLanguages = getSelectedLanguages();
+
+                fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        languages: selectedLanguages,
+                        enable_fallback: true
+                    })
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(result) {
+                    showLoading(false);
+                    displayResults(text, result.translations, 'Translation');
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    console.error('Error:', error);
+                    showError('Translation failed');
+                });
+            }
+
+            // Background AI analysis functions
+            function startBackgroundAIAnalysis(text) {
+                var selectedLanguages = getSelectedLanguages();
+                if (selectedLanguages.length === 0) return;
+                
+                // Helper function to check if cache matches current text and languages
+                function cacheMatches(cache, text, languages) {
+                    return cache.text === text && JSON.stringify(cache.languages) === JSON.stringify(languages);
+                }
+                
+                // Start regular AI analysis in background
+                if (!cacheMatches(aiAnalysisCache.regularAI, text, selectedLanguages)) {
+                    aiAnalysisCache.regularAI = { pending: true, result: null, text: text, languages: selectedLanguages.slice() };
+                    
+                    fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text, languages: selectedLanguages })
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (cacheMatches(aiAnalysisCache.regularAI, text, selectedLanguages)) { // Only cache if text and languages haven't changed
+                            aiAnalysisCache.regularAI = { pending: false, result: result, text: text, languages: selectedLanguages.slice() };
+                        }
+                    })
+                    .catch(error => {
+                        if (cacheMatches(aiAnalysisCache.regularAI, text, selectedLanguages)) {
+                            aiAnalysisCache.regularAI = { pending: false, result: null, text: text, languages: selectedLanguages.slice() };
+                        }
+                    });
+                }
+                
+            }
+
+            function chatWithAI() {
+                var text = textInput.value.trim();
+                if (!text) {
+                    alert('Please enter a message to chat');
+                    return;
+                }
+
+                var selectedLanguages = getSelectedLanguages();
+                if (selectedLanguages.length === 0) {
+                    alert('Please select at least one language');
+                    return;
+                }
+
+                // Helper function to check if cache matches current text and languages
+                function cacheMatches(cache, text, languages) {
+                    return cache.text === text && JSON.stringify(cache.languages) === JSON.stringify(languages);
+                }
+                
+                // Check if we have cached result for this exact text and languages
+                if (cacheMatches(aiAnalysisCache.regularAI, text, selectedLanguages) && aiAnalysisCache.regularAI.result) {
+                    var result = aiAnalysisCache.regularAI.result;
+                    if (result.translations && result.translations.length > 0) {
+                        displayResults(text, result.translations, 'AI Chat Response');
+                    } else {
+                        var detectedLang = result.source_language || 'en';
+                        displayChatResponse(text, result.response, detectedLang);
+                    }
+                    return;
+                }
+
+                // Check if request is pending for this text and languages
+                if (cacheMatches(aiAnalysisCache.regularAI, text, selectedLanguages) && aiAnalysisCache.regularAI.pending) {
+                    showLoading(true);
+                    // Wait for the pending request to complete
+                    var checkInterval = setInterval(function() {
+                        if (!aiAnalysisCache.regularAI.pending && aiAnalysisCache.regularAI.result) {
+                            clearInterval(checkInterval);
+                            showLoading(false);
+                            var result = aiAnalysisCache.regularAI.result;
+                            if (result.translations && result.translations.length > 0) {
+                                displayResults(text, result.translations, 'AI Chat Response');
+                            } else {
+                                var detectedLang = result.source_language || 'en';
+                                displayChatResponse(text, result.response, detectedLang);
+                            }
+                        } else if (!aiAnalysisCache.regularAI.pending && !aiAnalysisCache.regularAI.result) {
+                            clearInterval(checkInterval);
+                            showLoading(false);
+                            showError('Chat failed');
+                        }
+                    }, 100); // Check every 100ms
+                    return;
+                }
+
+                // No cache, make fresh request
+                showLoading(true);
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        languages: selectedLanguages
+                    })
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(result) {
+                    showLoading(false);
+                    if (result.translations && result.translations.length > 0) {
+                        displayResults(text, result.translations, 'AI Chat Response');
+                    } else {
+                        var detectedLang = result.source_language || 'en';
+                        displayChatResponse(text, result.response, detectedLang);
+                    }
+                })
+                .catch(function(error) {
+                    showLoading(false);
+                    console.error('Error:', error);
+                    showError('Chat failed');
+                });
+            }
+
+
+            function openShop() {
+                window.open('https://t.me/QRQODESBOT', '_blank');
+            }
+
+            function getSelectedLanguages() {
+                var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                var languages = [];
+                for (var i = 0; i < checkboxes.length; i++) {
+                    languages.push(checkboxes[i].value);
+                }
+                return languages;
+            }
+
+            function displayResults(originalText, translations, modelUsed) {
+                var resultsContent = document.getElementById('resultsContent');
+                var html = '';
+                
+                // Save to enhanced history with both input and translations
+                addToHistory(originalText, translations);
+                
+                // Store original text for enhanced AI analysis
+                resultsContent.dataset.originalText = originalText;
+                
+                // Never show the original text - user already knows what they wrote
+                
+                for (var i = 0; i < translations.length; i++) {
+                    var translation = translations[i];
+                    html += '<div class="translation-item" data-lang="' + translation.name + '" data-text="' + translation.text.replace(/"/g, '&quot;') + '">';
+                    html += '<strong>' + (translation.flag || '🌍') + ' ' + translation.name.toUpperCase() + ':</strong><br>';
+                    html += '<div class="translation-text">';
+                    html += makeWordsClickable(translation.text, translation.code);
+                    html += '</div>';
+                    // Store translation text in a data attribute for safe copying
+                    var translationId = 'translation_' + translation.code + '_' + Date.now();
+                    html += '<div id="' + translationId + '" style="display: none;">' + translation.text + '</div>';
+                    html += '<br><button class="action-btn" onclick="copyTranslationText(\'' + translationId + '\')">✅ COPY</button>';
+                    var audioText = translation.audio_text || translation.text;
+                    var audioId = 'audio_' + translation.code + '_' + Date.now();
+                    html += '<button class="action-btn" onclick="generateAudio(\'' + audioText.replace(/'/g, "\\'") + '\', \'' + translation.code + '\', \'' + audioId + '\')">🎧 ' + (translation.flag || '🌍') + '</button>';
+                    html += '<button class="action-btn stop-btn" onclick="stopAudio(\'' + audioId + '\')" title="Stop audio" style="display: none; margin-left: 5px;">⏹️</button>';
+                    
+
+                    // Image and video generation removed as requested
+                    
+                    // Add UNI correction button for UNI translations
+                    if (translation.code === 'uni') {
+                        html += '<button class="action-btn" onclick="openCorrectionDialog(\'' + originalText.replace(/'/g, "\\'") + '\', \'' + translation.text.replace(/'/g, "\\'") + '\', \'en\', \'uni\')" title="Correct UNI translation" style="background: #000; border: 1px solid #fff; color: #fff;">✏️ CORRECT</button>';
+                        
+                        // Qwen functionality removed as requested
+                        
+                        // Add UNI Grammar System button (opens in-page menu)
+                        html += '<button class="action-btn" onclick="showUniGrammarModal()" title="UNI Grammar Reference - Complete grammar guide for the simplified international language" style="background: #000; border: 1px solid #fff; color: #fff; margin-left: 5px;">📚 UNI GRAMMAR</button>';
+                    }
+                    html += '</div>';
+                }
+                
+                resultsContent.innerHTML = html;
+            }
+
+            function displayChatResponse(userMessage, aiResponse, detectedLanguage) {
+                var resultsContent = document.getElementById('resultsContent');
+                var html = '<div class="translation-item" style="background: rgba(0, 60, 0, 0.6); border-left: 3px solid #00cc00;">';
+                html += '<strong>🤖 AI RESPONSE:</strong><br>' + aiResponse;
+                html += '<br><button class="action-btn" onclick="copyText(\'' + aiResponse.replace(/'/g, "\\'") + '\')">✅ COPY</button>';
+                var chatAudioId = 'audio_chat_' + Date.now();
+                var audioLang = detectedLanguage || 'en';
+                html += '<button class="action-btn" onclick="generateAudio(\'' + aiResponse.replace(/'/g, "\\'") + '\', \'' + audioLang + '\', \'' + chatAudioId + '\')">🎧 🌍</button>';
+                html += '<button class="action-btn stop-btn" onclick="stopAudio(\'' + chatAudioId + '\')" title="Stop audio" style="display: none; margin-left: 5px;">⏹️</button>';
+                html += '</div>';
+                resultsContent.innerHTML = html;
+            }
+            
+            // Make function globally accessible
+            window.copyTranslationText = function(translationId) {
+                var element = document.getElementById(translationId);
+                if (element) {
+                    var text = element.textContent || element.innerText;
+                    copyText(text);
+                } else {
+                    showError('Could not find text to copy');
+                }
+            };
+
+            function showError(message) {
+                var resultsContent = document.getElementById('resultsContent');
+                resultsContent.innerHTML = '<div style="color: #ff0000; text-align: center; padding: 20px;">❌ ' + message + '</div>';
+            }
+        });
+
+        // Clear and Paste functions
+        function clearText() {
+            var textInput = document.getElementById('textInput');
+            textInput.value = '';
+            textInput.focus();
+            playSound('click');
+        }
+
+        function pasteText() {
+            var textInput = document.getElementById('textInput');
+            
+            // Try to read from clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText()
+                    .then(function(text) {
+                        textInput.value = text;
+                        textInput.focus();
+                        playSound('click');
+                    })
+                    .catch(function(error) {
+                        console.log('Clipboard access denied, trying fallback');
+                        // Fallback for browsers that don't support clipboard API
+                        textInput.focus();
+                        document.execCommand('paste');
+                        playSound('click');
+                    });
+            } else {
+                // Fallback for older browsers
+                textInput.focus();
+                document.execCommand('paste');
+                playSound('click');
+            }
+        }
+
+        // Enhanced history management with translations
+        var translationHistory = JSON.parse(localStorage.getItem('unilingus_translation_history') || '[]');
+        
+        function addToHistory(inputText, translations) {
+            if (inputText && inputText.trim().length > 0) {
+                var historyItem = {
+                    input: inputText.trim(),
+                    translations: translations || [],
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Remove duplicates based on input text
+                translationHistory = translationHistory.filter(item => item.input !== inputText.trim());
+                translationHistory.unshift(historyItem);
+                
+                // Keep only last 20 items
+                if (translationHistory.length > 20) {
+                    translationHistory = translationHistory.slice(0, 20);
+                }
+                
+                localStorage.setItem('unilingus_translation_history', JSON.stringify(translationHistory));
+                updateHistoryDisplay();
+            }
+        }
+        
+        function toggleHistory() {
+            showHistoryModal();
+            playSound('click');
+        }
+
+        function toggleLanguages() {
+            var panel = document.getElementById('languagesPanel');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+            playSound('click');
+        }
+
+        function showUniGrammar() {
+            // Redirect to the comprehensive UNI learning platform
+            showUniGrammarModal();
+            playSound('click');
+        }
+
+        function showHistoryModal() {
+            updateHistoryDisplay();
+            
+            const historyModal = document.createElement('div');
+            historyModal.className = 'modal-overlay';
+            historyModal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #eee;">
+                        <h3 style="margin: 0; color: #333;">📚 Translation History</h3>
+                        <button onclick="closeHistoryModal()" 
+                                style="background: #ff6b6b; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(255,107,107,0.3);">
+                            ✕ CLOSE
+                        </button>
+                    </div>
+                    <div id="historyModalContent">
+                        ${document.getElementById('historyContent').innerHTML}
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(historyModal);
+        }
+
+        function closeHistoryModal() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function updateHistoryDisplay() {
+            var content = document.getElementById('historyContent');
+            if (translationHistory.length === 0) {
+                content.innerHTML = '<div style="color: #006600; text-align: center;">No history yet</div>';
+            } else {
+                var html = '';
+                for (var i = 0; i < translationHistory.length; i++) {
+                    var item = translationHistory[i];
+                    var inputPreview = item.input.length > 40 ? item.input.substring(0, 40) + '...' : item.input;
+                    
+                    html += '<div style="margin: 8px 0; padding: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; cursor: pointer; border-left: 3px solid #fff;" onclick="selectFromHistory(' + i + ')">';
+                    html += '<div style="color: #fff; font-weight: bold; margin-bottom: 6px;">📝 ' + inputPreview + '</div>';
+                    
+                    // Show translations if available
+                    if (item.translations && item.translations.length > 0) {
+                        html += '<div style="margin-left: 12px;">';
+                        for (var j = 0; j < Math.min(3, item.translations.length); j++) {
+                            var trans = item.translations[j];
+                            var transPreview = trans.text.length > 35 ? trans.text.substring(0, 35) + '...' : trans.text;
+                            html += '<div style="color: #888888; font-size: 0.9em; margin: 2px 0;">';
+                            html += trans.flag + ' ' + transPreview;
+                            html += '</div>';
+                        }
+                        if (item.translations.length > 3) {
+                            html += '<div style="color: #666666; font-size: 0.8em; font-style: italic;">... and ' + (item.translations.length - 3) + ' more</div>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                }
+                content.innerHTML = html;
+            }
+        }
+        
+        function selectFromHistory(index) {
+            if (index < translationHistory.length) {
+                document.getElementById('textInput').value = translationHistory[index].input;
+                document.getElementById('historyPanel').style.display = 'none';
+                document.getElementById('textInput').focus();
+                playSound('click');
+            }
+        }
+
+        // iPhone-style click sound for all buttons
+        function playSound(type) {
+            try {
+                var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                var oscillator = audioContext.createOscillator();
+                var gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // iPhone keyboard click settings
+                oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+                oscillator.type = 'triangle';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.015, audioContext.currentTime + 0.001);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.01);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.01);
+            } catch (e) {
+                // Silent fail if audio context not available
+            }
+        }
+
+        // Add sound effects to all button interactions
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('button') || e.target.matches('.btn') || e.target.matches('.action-btn') || e.target.matches('.mic-button')) {
+                playSound('click');
+            }
+        });
+
+        // Add typing sounds
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('textarea') || e.target.matches('input[type="text"]')) {
+                playSound('type');
+            }
+        });
+
+        function getSelectedLanguages() {
+            var checkboxes = document.querySelectorAll('.language-checkbox:checked');
+            var languages = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                languages.push(checkboxes[i].value);
+            }
+            return languages;
+        }
+
+        function escapeHtml(text) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;',
+                '/': '&#x2F;'
+            };
+            return text.replace(/[&<>"'\/]/g, function(s) {
+                return map[s];
+            });
+        }
+
+        function showNotification(message) {
+            var notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.9);
+                color: #000;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 16px;
+                z-index: 1000;
+                box-shadow: 0 0 20px #fff;
+                animation: fadeInOut 1.5s ease-in-out;
+                pointer-events: none;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(function() {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 1500);
+        }
+
+        function copyText(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showNotification('✅ COPIED TO CLIPBOARD');
+                });
+            } else {
+                var textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showNotification('✅ COPIED TO CLIPBOARD');
+            }
+        }
+
+        function generateAudio(text, languageCode, audioId) {
+            // Show loading indicator
+            showLoading(true);
+            
+            // Stop any currently playing audio for this ID
+            if (audioId && globalAudioInstances[audioId]) {
+                globalAudioInstances[audioId].pause();
+                globalAudioInstances[audioId].currentTime = 0;
+            }
+            
+            fetch('/audio_generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    language: languageCode
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                showLoading(false);
+                if (result.audio_url) {
+                    // Create new audio instance
+                    var audio = new Audio(result.audio_url + '?t=' + Date.now());
+                    
+                    // Store in global instances if audioId provided
+                    if (audioId) {
+                        globalAudioInstances[audioId] = audio;
+                        
+                        // Show stop button
+                        var stopBtn = document.querySelector(`button[onclick*="stopAudio('${audioId}')"]`);
+                        if (stopBtn) {
+                            stopBtn.style.display = 'inline-block';
+                        }
+                        
+                        // Hide stop button when audio ends
+                        audio.addEventListener('ended', function() {
+                            if (stopBtn) {
+                                stopBtn.style.display = 'none';
+                            }
+                            delete globalAudioInstances[audioId];
+                        });
+                    }
+                    
+                    audio.play().catch(function(error) {
+                        console.error('Audio play error:', error);
+                        // Try again without cache busting
+                        var retryAudio = new Audio(result.audio_url);
+                        if (audioId) {
+                            globalAudioInstances[audioId] = retryAudio;
+                        }
+                        retryAudio.play().catch(function(retryError) {
+                            console.error('Audio retry failed:', retryError);
+                            showError('Audio playback failed: ' + retryError.message);
+                        });
+                    });
+                } else {
+                    showError('Audio generation failed');
+                }
+            })
+            .catch(function(error) {
+                showLoading(false);
+                console.error('Audio generation error:', error);
+                showError('Audio generation failed');
+            });
+        }
+        
+        function stopAudio(audioId) {
+            if (globalAudioInstances[audioId]) {
+                globalAudioInstances[audioId].pause();
+                globalAudioInstances[audioId].currentTime = 0;
+                delete globalAudioInstances[audioId];
+                
+                // Hide stop button
+                var stopBtn = document.querySelector(`button[onclick*="stopAudio('${audioId}')"]`);
+                if (stopBtn) {
+                    stopBtn.style.display = 'none';
+                }
+                
+                console.log('Audio stopped:', audioId);
+            }
+        }
+
+        function playAudioWithFallback(audioUrl, provider) {
+            console.log('Playing audio:', audioUrl, 'Provider:', provider);
+            
+            // Use simple HTML5 audio for all formats - most reliable
+            var audio = new Audio();
+            audio.onloadstart = function() {
+                console.log('Audio loading started');
+            };
+            audio.oncanplay = function() {
+                console.log('Audio can start playing');
+                audio.play().then(function() {
+                    console.log('Audio playback started successfully');
+                }).catch(function(error) {
+                    console.error('Audio play failed:', error);
+                    showError('Audio playback failed. Please check your browser settings.');
+                });
+            };
+            audio.onerror = function(e) {
+                console.error('Audio error:', e);
+                showError('Audio file could not be loaded');
+            };
+            
+            // Add cache busting to ensure fresh audio file
+            audio.src = audioUrl + '?t=' + Date.now();
+            audio.load();
+        }
+        
+        function playAudioWithWebAudioAPI(audioUrl, provider) {
+            console.log('Using Web Audio API for:', audioUrl);
+            
+            var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            fetch(audioUrl + '?t=' + Date.now().toString())
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(function(arrayBuffer) {
+                    return audioContext.decodeAudioData(arrayBuffer);
+                })
+                .then(function(audioBuffer) {
+                    var source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContext.destination);
+                    source.start(0);
+                    console.log('Web Audio API playback successful for:', provider);
+                })
+                .catch(function(error) {
+                    console.error('Web Audio API playback failed:', error);
+                    // Fallback to standard audio
+                    playStandardAudio(audioUrl, provider);
+                });
+        }
+        
+        function playStandardAudio(audioUrl, provider) {
+            // Enhanced audio playback with compatibility handling
+            var audio = new Audio();
+            
+            // Add error handling for problematic audio formats
+            audio.addEventListener('error', function(e) {
+                console.error('Audio playback error:', e);
+                console.log('Provider:', provider, 'URL:', audioUrl);
+                
+                // Try alternative playback method for Google TTS files
+                if (provider === 'Google TTS') {
+                    tryAlternativePlayback(audioUrl);
+                } else {
+                    showError('Audio playback failed');
+                }
+            });
+            
+            audio.addEventListener('canplaythrough', function() {
+                console.log('Audio ready to play:', provider);
+            });
+            
+            audio.addEventListener('loadstart', function() {
+                console.log('Audio loading started:', audioUrl);
+            });
+            
+            // Set source and attempt to play
+            audio.src = audioUrl + '?t=' + Date.now().toString(); // Cache busting
+            audio.load();
+            
+            var playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(function() {
+                    console.log('Audio playing successfully');
+                }).catch(function(error) {
+                    console.error('Play promise rejected:', error);
+                    if (provider === 'Google TTS') {
+                        tryAlternativePlayback(audioUrl);
+                    } else {
+                        showError('Audio playback failed');
+                    }
+                });
+            }
+        }
+        
+        function tryAlternativePlayback(audioUrl) {
+            // Alternative playback method for Google TTS files
+            console.log('Trying alternative playback method');
+            
+            // Create a new audio element with different settings
+            var altAudio = document.createElement('audio');
+            altAudio.preload = 'auto';
+            altAudio.controls = false;
+            
+            altAudio.addEventListener('canplay', function() {
+                console.log('Alternative audio method ready');
+                altAudio.play().then(function() {
+                    console.log('Alternative playback successful');
+                }).catch(function(error) {
+                    console.error('Alternative playback failed:', error);
+                    showError('Audio format not supported by browser');
+                });
+            });
+            
+            altAudio.addEventListener('error', function(e) {
+                console.error('Alternative audio error:', e);
+                showError('Audio format not supported by browser');
+            });
+            
+            // Try loading the audio file
+            altAudio.src = audioUrl + '?alt=' + Date.now();
+            altAudio.load();
+        }
+
+        // Global audio management for stop functionality is already declared above
+
+        function enhanceWithQwen(originalText, currentTranslation, language) {
+            if (!currentTranslation || currentTranslation.trim() === '') {
+                showError('No translation available to enhance');
+                return;
+            }
+
+            // Show enhanced dialog with AI chat capability
+            showQwenEnhancementDialog(originalText, currentTranslation, language);
+        }
+        
+        function showQwenEnhancementDialog(originalText, currentTranslation, language) {
+            // Create enhanced dialog for Qwen interaction
+            const dialogHtml = `
+                <div id="qwenDialog" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 700px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 15px;">
+                            <h3 style="margin: 0; color: #f0f0f0;">🤖 UNI AI Enhancement System</h3>
+                            <button onclick="closeQwenDialog()" style="background: none; border: none; color: #f0f0f0; font-size: 24px; cursor: pointer;">×</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <strong>Original Text:</strong>
+                            <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-top: 5px; color: #f0f0f0;">
+                                ${originalText}
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <strong>Current UNI Translation:</strong>
+                            <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-top: 5px; color: #f0f0f0;">
+                                ${currentTranslation}
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <strong>Chat with UNI AI:</strong>
+                            <div id="qwenChatContainer" style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-top: 10px; max-height: 250px; overflow-y: auto;">
+                                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                                    <strong>UNI AI:</strong> Hi! I'm your UNI grammar expert. I can help improve this translation using complete UNI grammar rules. Ask me questions or request enhancements!
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
+                                <input type="text" id="qwenChatInput" placeholder="Ask about UNI grammar or request improvements..." 
+                                       style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: rgba(255,255,255,0.9); color: #333;"
+                                       onkeypress="if(event.key==='Enter') sendQwenMessage()">
+                                <button onclick="sendQwenMessage()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
+                                    💬 Send
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <strong>Enhanced Translation:</strong>
+                            <input type="text" id="qwenEnhancedText" placeholder="Enhanced translation will appear here..." 
+                                   style="width: 100%; padding: 10px; border: none; border-radius: 8px; background: rgba(255,255,255,0.9); color: #333; margin-top: 5px;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="autoEnhanceWithAI()" style="background: #ffc107; color: #333; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                ✨ AUTO ENHANCE
+                            </button>
+                            <button onclick="applyQwenEnhancement()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                ✅ APPLY
+                            </button>
+                            <button onclick="closeQwenDialog()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing dialog if any
+            const existingDialog = document.getElementById('qwenDialog');
+            if (existingDialog) {
+                existingDialog.remove();
+            }
+            
+            // Add new dialog to body
+            document.body.insertAdjacentHTML('beforeend', dialogHtml);
+            
+            // Store current data
+            window.currentQwenData = {
+                original: originalText,
+                current: currentTranslation,
+                language: language
+            };
+        }
+        
+        function closeQwenDialog() {
+            const dialog = document.getElementById('qwenDialog');
+            if (dialog) {
+                dialog.remove();
+            }
+            window.currentQwenData = null;
+        }
+        
+        function sendQwenMessage() {
+            const input = document.getElementById('qwenChatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addQwenChatMessage(message, 'user');
+            input.value = '';
+            
+            // Add loading message
+            const loadingId = 'loading_' + Date.now();
+            addQwenChatMessage('Thinking...', 'ai', loadingId);
+            
+            // Send to enhanced Qwen system
+            fetch('/enhance_with_qwen', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: window.currentQwenData.current,
+                    source_lang: 'en',
+                    target_lang: 'uni',
+                    user_message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove loading message
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+                
+                if (data.success && data.enhanced_text) {
+                    addQwenChatMessage(data.enhanced_text, 'ai');
+                    // Update enhanced text field
+                    document.getElementById('qwenEnhancedText').value = data.enhanced_text;
+                } else {
+                    addQwenChatMessage('Sorry, I encountered an error. Please try again.', 'ai');
+                }
+            })
+            .catch(error => {
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+                console.error('Qwen chat error:', error);
+                addQwenChatMessage('Connection error. Please try again.', 'ai');
+            });
+        }
+        
+        function addQwenChatMessage(message, sender, id = null) {
+            const container = document.getElementById('qwenChatContainer');
+            if (!container) return;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                background: ${sender === 'user' ? 'rgba(40, 167, 69, 0.8)' : 'rgba(255,255,255,0.2)'};
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                color: #f0f0f0;
+            `;
+            
+            if (id) messageDiv.id = id;
+            
+            messageDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : 'UNI AI'}:</strong> ${message}`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function autoEnhanceWithAI() {
+            const enhanceBtn = event.target;
+            const originalText = enhanceBtn.innerHTML;
+            enhanceBtn.innerHTML = '⏳ ENHANCING...';
+            enhanceBtn.disabled = true;
+            
+            fetch('/enhance_with_qwen', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: window.currentQwenData.current,
+                    source_lang: 'en',
+                    target_lang: 'uni'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                enhanceBtn.innerHTML = originalText;
+                enhanceBtn.disabled = false;
+                
+                if (data.success && data.enhanced_text) {
+                    document.getElementById('qwenEnhancedText').value = data.enhanced_text;
+                    addQwenChatMessage(`Auto-enhanced using complete UNI grammar: "${data.enhanced_text}"`, 'ai');
+                } else {
+                    addQwenChatMessage('Auto-enhancement failed. Try manual chat instead.', 'ai');
+                }
+            })
+            .catch(error => {
+                enhanceBtn.innerHTML = originalText;
+                enhanceBtn.disabled = false;
+                addQwenChatMessage('Enhancement error. Please try again.', 'ai');
+            });
+        }
+        
+        function applyQwenEnhancement() {
+            const enhancedText = document.getElementById('qwenEnhancedText').value.trim();
+            
+            if (!enhancedText) {
+                alert('No enhanced translation to apply');
+                return;
+            }
+            
+            // Apply the enhanced translation by updating the displayed result
+            showSuccess(`UNI translation enhanced: "${enhancedText}"`);
+            closeQwenDialog();
+        }
+
+        function acceptQwenEnhancement(enhancedText, button) {
+            // Find the current translation result and update it
+            const resultDiv = document.getElementById('result');
+            if (resultDiv) {
+                // Update the displayed translation with the enhanced version
+                const translationDivs = resultDiv.querySelectorAll('[id*="translation_uni"]');
+                if (translationDivs.length > 0) {
+                    const latestDiv = translationDivs[translationDivs.length - 1];
+                    latestDiv.textContent = enhancedText;
+                    showSuccess('Translation updated with Qwen enhancement');
+                }
+            }
+            
+            // Close the modal
+            button.closest('.modal-overlay').remove();
+        }
+
+        // Infinite Wiki Functions - Click to open definition modal
+        function makeWordsClickable(text, language) {
+            // First, normalize spacing after punctuation for all languages
+            // This fixes "tal?Cómo" -> "tal? Cómo"
+            text = text.replace(/([.!?。！？¿¡])([^\s\d.!?。！？¿¡])/g, '$1 $2');
+            
+            const isCJK = language === 'zh-CN' || language === 'ja' || language === 'ko';
+            
+            if (isCJK) {
+                // For CJK: each character clickable with NO gaps (inline display)
+                return text.split('').map(char => {
+                    if (char.trim() && !/[\s\[\]（）。，、！？\n]/.test(char)) {
+                        return `<span class="cjk-char clickable-word" onclick="openDefinitionModal('${char}', '${language}')">${char}</span>`;
+                    }
+                    return char;
+                }).join('');
+            }
+            
+            return text.split(/(\s+)/).map(segment => {
+                if (segment.trim() && /[\p{L}]+/u.test(segment)) {
+                    // Preserve Unicode letters including accents (á, é, ó, ü, etc.)
+                    const cleanWord = segment.replace(/[^\p{L}]/gu, '');
+                    return `<span class="wiki-word clickable-word" onclick="openDefinitionModal('${cleanWord}', '${language}')">${segment}</span>`;
+                }
+                return segment;
+            }).join('');
+        }
+
+        // Definition Modal - Full screen on mobile, half screen on desktop
+        let definitionModal = null;
+        let definitionAudio = null;
+
+        function openDefinitionModal(word, language = 'en') {
+            closeDefinitionModal();
+            
+            const langNames = {
+                'en': 'English', 'es': 'Spanish', 'pt': 'Portuguese', 'it': 'Italian',
+                'fr': 'French', 'ru': 'Russian', 'de': 'German', 'zh-CN': 'Chinese',
+                'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'uni': 'UNI'
+            };
+            const langName = langNames[language] || language;
+            
+            const overlay = document.createElement('div');
+            overlay.id = 'definition-modal-overlay';
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.85); z-index: 9999;
+                display: flex; align-items: center; justify-content: center;
+                padding: 20px; box-sizing: border-box;
+            `;
+            overlay.onclick = (e) => { if (e.target === overlay) closeDefinitionModal(); };
+            
+            const modal = document.createElement('div');
+            modal.id = 'definition-modal-content';
+            modal.style.cssText = `
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: #fff; border-radius: 16px; padding: 24px;
+                width: 65vw; max-width: 700px; min-height: 60vh; max-height: 85vh;
+                overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                border: 2px solid rgba(255,255,255,0.2);
+                font-size: 16px; line-height: 1.6;
+            `;
+            
+            modal.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 24px; color: #4ecdc4;">${word}</h2>
+                    <button onclick="closeDefinitionModal()" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; padding: 0;">✕</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
+                    <span style="color: #888;">Language:</span> <strong>${langName}</strong>
+                </div>
+                <div id="def-pronunciation" style="margin-bottom: 20px;">
+                    <button onclick="playWordPronunciation('${word}', '${language}')" id="play-word-btn" 
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; 
+                                   color: #fff; padding: 12px 24px; border-radius: 25px; cursor: pointer; 
+                                   font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        <span>🔊</span> <span id="play-word-text">Play Pronunciation</span>
+                    </button>
+                    <div id="word-audio-container" style="margin-top: 10px;"></div>
+                </div>
+                <div id="def-content" style="min-height: 100px;">
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 24px; animation: spin 1s linear infinite;">⏳</div>
+                        <p style="color: #888; margin-top: 10px;">Loading definition...</p>
+                    </div>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
+            definitionModal = overlay;
+            
+            fetchDefinition(word, language);
+        }
+
+        function closeDefinitionModal() {
+            if (definitionModal) {
+                definitionModal.remove();
+                definitionModal = null;
+                document.body.style.overflow = '';
+            }
+            if (definitionAudio) {
+                definitionAudio.pause();
+                definitionAudio = null;
+            }
+        }
+
+        async function fetchDefinition(word, language) {
+            try {
+                const response = await fetch('/word_definition_tooltip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word, language })
+                });
+                
+                const data = await response.json();
+                const contentDiv = document.getElementById('def-content');
+                
+                if (data.success && contentDiv) {
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 20px;">
+                            <div style="color: #4ecdc4; font-weight: bold; margin-bottom: 8px; font-size: 14px;">DEFINITION</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; border-left: 4px solid #4ecdc4;">
+                                ${escapeHtml(data.definition) || 'Not available'}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="color: #feca57; font-weight: bold; margin-bottom: 8px; font-size: 14px;">SYNONYMS</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; border-left: 4px solid #feca57;">
+                                ${escapeHtml(data.synonyms) || 'Not available'}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="color: #ff6b6b; font-weight: bold; margin-bottom: 8px; font-size: 14px;">EXAMPLE</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; border-left: 4px solid #ff6b6b; font-style: italic;">
+                                "${escapeHtml(data.example) || 'Not available'}"
+                            </div>
+                        </div>
+                        <div style="text-align: center; color: #666; font-size: 12px; margin-top: 16px;">
+                            Powered by ${escapeHtml(data.provider) || 'AI'}
+                        </div>
+                    `;
+                } else if (contentDiv) {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; color: #ff6b6b; padding: 40px;">
+                            <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
+                            <p>Definition unavailable. Try again later.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const contentDiv = document.getElementById('def-content');
+                if (contentDiv) {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; color: #ff6b6b; padding: 40px;">
+                            <div style="font-size: 32px; margin-bottom: 10px;">❌</div>
+                            <p>Error loading definition</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function playWordPronunciation(word, language) {
+            const btn = document.getElementById('play-word-btn');
+            const textSpan = document.getElementById('play-word-text');
+            const container = document.getElementById('word-audio-container');
+            
+            // Stop if already playing
+            if (definitionAudio && !definitionAudio.paused) {
+                definitionAudio.pause();
+                definitionAudio.currentTime = 0;
+                textSpan.textContent = 'Play Pronunciation';
+                return;
+            }
+            
+            // If audio already loaded, replay
+            if (definitionAudio) {
+                definitionAudio.currentTime = 0;
+                definitionAudio.play();
+                textSpan.textContent = 'Stop';
+                return;
+            }
+            
+            textSpan.textContent = 'Loading...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/generate_audio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: word, language })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.audio_url) {
+                    container.innerHTML = `<audio id="def-audio-player" controls src="${data.audio_url}" style="width: 100%; margin-top: 10px;"></audio>`;
+                    definitionAudio = document.getElementById('def-audio-player');
+                    definitionAudio.onended = () => { textSpan.textContent = 'Play Again'; };
+                    definitionAudio.onplay = () => { textSpan.textContent = 'Stop'; };
+                    definitionAudio.onpause = () => { textSpan.textContent = 'Play Pronunciation'; };
+                    definitionAudio.play();
+                } else if (data.use_browser_tts) {
+                    const utterance = new SpeechSynthesisUtterance(word);
+                    utterance.lang = language === 'zh-CN' ? 'zh-CN' : language;
+                    speechSynthesis.speak(utterance);
+                    textSpan.textContent = 'Play Pronunciation';
+                    container.innerHTML = '<p style="color: #888; font-size: 12px;">Using browser voice</p>';
+                } else {
+                    textSpan.textContent = 'Audio unavailable';
+                }
+            } catch (error) {
+                textSpan.textContent = 'Error';
+                console.error('Pronunciation error:', error);
+            }
+            
+            btn.disabled = false;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // CSS animation and responsive modal styles
+        if (!document.getElementById('def-modal-styles')) {
+            const style = document.createElement('style');
+            style.id = 'def-modal-styles';
+            style.textContent = `
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .wiki-word:hover { background: rgba(78, 205, 196, 0.3) !important; border-radius: 3px; }
+                @media (max-width: 600px) {
+                    #definition-modal-content {
+                        width: 100% !important; max-width: 100% !important; 
+                        height: 100% !important; max-height: 100% !important;
+                        border-radius: 0 !important; margin: 0 !important;
+                    }
+                    #definition-modal-overlay { padding: 0 !important; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function generateHiggsAudio(text, langCode, audioId) {
+            if (!text || text.trim() === '') {
+                showError('No text available for Higgs audio generation');
+                return;
+            }
+
+            // Show loading state
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '⏳ GENERATING...';
+            button.disabled = true;
+
+            fetch('/generate_higgs_audio', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    language: langCode,
+                    voice_style: 'neutral'
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                button.textContent = originalText;
+                button.disabled = false;
+
+                if (result.success && result.audio_url) {
+                    // Stop any currently playing audio
+                    stopAllAudio();
+
+                    // Play the enhanced Higgs audio
+                    const audio = new Audio(result.audio_url);
+                    currentAudio = audio;
+                    
+                    // Show stop button
+                    const stopBtn = document.getElementById('stop_' + audioId);
+                    if (stopBtn) {
+                        stopBtn.style.display = 'inline-block';
+                    }
+
+                    audio.play().then(() => {
+                        console.log('Higgs enhanced audio playing: ' + text.substring(0, 50) + '...');
+                        showSuccess('Enhanced Higgs Audio generated successfully!');
+                    }).catch(error => {
+                        console.error('Higgs audio playback failed:', error);
+                        showError('Higgs audio playback failed');
+                    });
+
+                    audio.addEventListener('ended', () => {
+                        if (stopBtn) {
+                            stopBtn.style.display = 'none';
+                        }
+                        currentAudio = null;
+                    });
+                } else {
+                    // Automatically fallback to standard audio - ensure we call it properly
+                    console.log('Higgs Audio not available, using standard audio fallback');
+                    showSuccess('Using standard audio (Higgs Audio setup in progress)');
+                    
+                    // Generate standard audio with proper parameters
+                    const standardAudioId = audioId.replace('_higgs', '');
+                    
+                    // Call standard audio with full URL path
+                    fetch('/generate_audio', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            language: langCode
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(audioResult => {
+                        if (audioResult.success && audioResult.audio_url) {
+                            // Play the audio
+                            stopAllAudio();
+                            const audio = new Audio(audioResult.audio_url);
+                            currentAudio = audio;
+                            audio.play();
+                        } else {
+                            // Last resort - use browser TTS
+                            if ('speechSynthesis' in window) {
+                                const utterance = new SpeechSynthesisUtterance(text);
+                                utterance.lang = langCode === 'uni' ? 'en' : langCode;
+                                speechSynthesis.speak(utterance);
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        // Browser TTS fallback
+                        if ('speechSynthesis' in window) {
+                            const utterance = new SpeechSynthesisUtterance(text);
+                            utterance.lang = langCode === 'uni' ? 'en' : langCode;
+                            speechSynthesis.speak(utterance);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                button.textContent = originalText;
+                button.disabled = false;
+                console.log('Higgs Audio not ready, using standard audio');
+                showSuccess('Using standard audio (Higgs Audio setup in progress)');
+                
+                // Fallback to standard audio generation
+                generateAudio(text, langCode, audioId.replace('_higgs', ''));
+            });
+        }
+
+        function chatWithAI() {
+            var text = textInput.value.trim();
+            if (!text) {
+                alert('Please enter a message to chat');
+                return;
+            }
+
+            var selectedLanguages = getSelectedLanguages();
+            if (selectedLanguages.length === 0) {
+                alert('Please select at least one language');
+                return;
+            }
+
+            showLoading(true);
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: text,
+                    languages: selectedLanguages
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                showLoading(false);
+                if (result.translations && result.translations.length > 0) {
+                    displayResults(text, result.translations, 'AI Chat Response');
+                } else {
+                    displayChatResponse(text, result.response);
+                }
+            })
+            .catch(function(error) {
+                showLoading(false);
+                console.error('Error:', error);
+                showError('Chat failed');
+            });
+        }
+
+        function openTranscriptUpload() {
+            var fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.mp3,.wav,.m4a,.flac,.ogg,.webm,.mp4,.avi,.mov,.mkv,.wmv';
+            
+            fileInput.onchange = function(event) {
+                var file = event.target.files[0];
+                if (file) {
+                    uploadAndTranscribe(file);
+                }
+            };
+            
+            fileInput.click();
+        }
+
+        function uploadAndTranscribe(file) {
+            showLoading(true);
+            
+            var formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/transcript', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                showLoading(false);
+                if (result.success) {
+                    displayTranscriptResult(file.name, result);
+                } else {
+                    showError(result.error || 'Transcript generation failed');
+                }
+            })
+            .catch(function(error) {
+                showLoading(false);
+                console.error('Transcript error:', error);
+                showError('Transcript generation failed');
+            });
+        }
+
+        function displayTranscriptResult(fileName, result) {
+            var resultsDiv = document.getElementById('resultsContent');
+            
+            // Check if this is a video file with professional player
+            if (result.video_player && result.file_type === 'video') {
+                // Display professional video player with subtitles
+                resultsDiv.innerHTML = result.video_player;
+                return;
+            }
+            
+            // Standard transcript display for audio files
+            var html = `
+                <div class="result-item" style="margin-bottom: 20px; padding: 15px; border: 1px solid #fff; border-radius: 8px; background: rgba(0, 0, 0, 0.5);">
+                    <div class="result-header" style="color: #fff; font-weight: bold; margin-bottom: 10px;">
+                        📝 Enhanced Transcript Generated
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>File:</strong> ${fileName}<br>
+                        <strong>Language:</strong> ${result.language}<br>
+                        <strong>Method:</strong> ${result.method}<br>
+                        <strong>Duration:</strong> ${formatDuration(result.duration || 0)}
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>Transcript:</strong><br>
+                        <div id="transcript-content" style="white-space: pre-wrap; font-family: monospace; color: #fff;">${result.transcript}</div>
+                    </div>
+            `;
+            
+            // Display segments with timestamps if available
+            if (result.segments && result.segments.length > 0) {
+                html += `
+                    <div style="margin-top: 10px;">
+                        <strong>Timestamped Segments:</strong>
+                        <div style="max-height: 200px; overflow-y: auto; margin-top: 5px; border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 4px; padding: 10px;">
+                `;
+                
+                result.segments.forEach(function(segment, index) {
+                    var start = formatTimestamp(segment.start);
+                    var end = formatTimestamp(segment.end);
+                    html += `
+                        <div style="margin-bottom: 8px; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 3px; cursor: pointer;" 
+                             onclick="seekToTimestamp(${segment.start})">
+                            <span style="color: #fff; font-weight: bold;">[${start} - ${end}]</span><br>
+                            <span style="color: #fff;">${segment.text}</span>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            }
+            
+            html += `
+                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="copyTranscriptText()" class="btn" style="background: rgba(0, 0, 0, 0.2); border: 1px solid #fff; color: #fff;">📋 Copy Transcript</button>
+                        <button onclick="translateTranscript('${result.transcript.replace(/'/g, "\\'")}', '${fileName}')" class="btn" style="background: rgba(0, 100, 255, 0.2); border: 1px solid #0066ff;">🔄 Translate</button>
+                        <button onclick="downloadTranscript('${result.transcript.replace(/'/g, "\\'")}', '${fileName}')" class="btn" style="background: rgba(255, 165, 0, 0.2); border: 1px solid #ffa500;">⬇️ Download</button>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function formatDuration(seconds) {
+            if (!seconds) return "0:00";
+            var minutes = Math.floor(seconds / 60);
+            var remainingSeconds = Math.floor(seconds % 60);
+            return minutes + ':' + (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+        }
+        
+        function copyTranscriptText() {
+            const transcriptElement = document.getElementById('transcript-content');
+            if (transcriptElement) {
+                const text = transcriptElement.textContent;
+                copyText(text);
+            }
+        }
+        
+        function downloadTranscript(text, fileName) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.replace(/\.[^/.]+$/, "") + '_transcript.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showSuccess('Transcript downloaded successfully!');
+        }
+        
+        function seekToTimestamp(seconds) {
+            // For audio playback seeking (if implemented)
+            console.log('Seek to:', seconds);
+            showSuccess(`Timestamp: ${formatTimestamp(seconds)}`);
+        }
+
+        function formatTimestamp(seconds) {
+            var minutes = Math.floor(seconds / 60);
+            var remainingSeconds = Math.floor(seconds % 60);
+            return minutes + ':' + (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+        }
+
+        function translateTranscript(text) {
+            document.getElementById('textInput').value = text;
+            translateTextWithAI();
+        }
+
+        // Silent AI initialization - no user indicators
+        function updateXenovaStatus(ready) {
+            // AI works silently in background
+            console.log('Xenova AI ready:', ready);
+        }
+
+        // Video functionality removed as requested
+
+        // Chat with AI function
+        async function chatWithAI() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                showError('Please enter a message to chat');
+                return;
+            }
+            
+            // Get selected languages
+            const selectedLanguages = getSelectedLanguages();
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message: text,
+                        languages: selectedLanguages 
+                    })
+                });
+                
+                const result = await response.json();
+                showLoading(false);
+                
+                if (result.success) {
+                    console.log('Chat result:', result);
+                    displayMultilingualChatResponse(text, result);
+                } else {
+                    showError(result.error || 'Chat failed');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Chat error:', error);
+                showError('Chat request failed');
+            }
+        }
+
+
+        function displayMultilingualChatResponse(userMessage, result) {
+            const resultsDiv = document.getElementById('results');
+            
+            console.log('Display function called with result:', result);
+            console.log('Multilingual responses:', result.multilingual_responses);
+            
+            let responseHtml = `
+                <div class="chat-conversation">
+                    <div class="user-message">
+                        <strong>You:</strong> ${userMessage}
+                    </div>
+                    <div class="ai-response-multilingual">
+                        <strong>AI Assistant Response:</strong>
+                        <div class="multilingual-responses">
+            `;
+            
+            // Display responses in all selected languages
+            if (result.multilingual_responses && Object.keys(result.multilingual_responses).length > 0) {
+                for (const [langCode, response] of Object.entries(result.multilingual_responses)) {
+                    const flag = getFlagEmoji(langCode);
+                    const langName = getLanguageName(langCode);
+                    const audioId = `audio_${langCode}_${Date.now()}`;
+                    
+                    responseHtml += `
+                        <div class="language-response">
+                            <div class="language-header">
+                                ${flag} <strong>${langName}:</strong>
+                                <button class="audio-btn" onclick="generateAudio('${response.replace(/'/g, "\\'")}', '${langCode}', '${audioId}')" title="Play audio">
+                                    🎧
+                                </button>
+                                <button class="stop-btn" onclick="stopAudio('${audioId}')" title="Stop audio" style="display: none; margin-left: 5px;">
+                                    ⏹️
+                                </button>
+                                <button class="copy-btn" onclick="copyText('${response.replace(/'/g, "\\'")}', this)" title="Copy text" style="margin-left: 5px;">
+                                    📋
+                                </button>
+                                ${(langCode === 'uni' || window.lastSourceLang === 'uni') ? `
+                                <button class="correct-btn" onclick="openCorrectionDialog('${window.lastInputText || ''}', '${response.replace(/'/g, "\\'")}', '${window.lastSourceLang || 'en'}', '${langCode}')" title="Correct UNI translation" style="margin-left: 5px; background: rgba(255, 100, 0, 0.8); border: 1px solid #ff6600;">
+                                    ✏️
+                                </button>` : ''}
+                            </div>
+                            <div class="response-text">${response}</div>
+                        </div>
+                    `;
+                }
+            } else {
+                // Fallback: show only English response if multilingual failed
+                responseHtml += `
+                    <div class="language-response">
+                        <div class="language-header">
+                            🇺🇸 <strong>English:</strong>
+                            <button class="audio-btn" onclick="generateAudio('${result.response.replace(/'/g, "\\'")}', 'en', 'audio_en_${Date.now()}')" title="Play audio">
+                                🎧
+                            </button>
+                            <button class="stop-btn" onclick="stopAudio('audio_en_${Date.now()}')" title="Stop audio" style="display: none; margin-left: 5px;">
+                                ⏹️
+                            </button>
+                            <button class="copy-btn" onclick="copyText('${result.response.replace(/'/g, "\\'")}', this)" title="Copy text" style="margin-left: 5px;">
+                                📋
+                            </button>
+                        </div>
+                        <div class="response-text">${result.response}</div>
+                    </div>
+                `;
+            }
+            
+            responseHtml += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = responseHtml;
+            resultsDiv.style.display = 'block';
+        }
+
+
+        function showShop() {
+            showError('Shop feature coming soon!');
+        }
+
+        function displayVideoWithSubtitles(result) {
+            const resultsDiv = document.getElementById('results');
+            
+            // Display video player with subtitles
+            let html = '<div class="video-transcription-results">';
+            
+            if (result.video_player) {
+                html += '<h3>Video with Subtitles</h3>';
+                html += result.video_player;
+            }
+            
+            // Display original transcription
+            html += '<div class="transcription-section">';
+            html += '<h4>Original Transcription</h4>';
+            html += `<p class="transcription-text">${result.original_text}</p>`;
+            html += '</div>';
+            
+            // Display translations with enhanced audio
+            if (result.translations && Object.keys(result.translations).length > 0) {
+                html += '<div class="translations-section">';
+                html += '<h4>Translations with Enhanced Audio</h4>';
+                
+                Object.entries(result.translations).forEach(([langCode, translation]) => {
+                    html += `
+                        <div class="translation-item" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                            <div class="translation-header">
+                                <span class="flag">${translation.flag}</span>
+                                <strong>${translation.name}</strong>
+                            </div>
+                            <p class="translation-text">${translation.text}</p>
+                            <button onclick="generateEnhancedAudio('${translation.text}', '${langCode}', '${translation.name}')" 
+                                    class="btn btn-primary btn-sm">
+                                🔊 Play Enhanced ${translation.name} Audio
+                            </button>
+                            <div id="audio-${langCode}" class="audio-container" style="margin-top: 10px;"></div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+            
+            // Auto-scroll to results
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function generateEnhancedAudio(text, langCode, langName) {
+            const audioContainer = document.getElementById(`audio-${langCode}`);
+            audioContainer.innerHTML = '<div class="loading-spinner">Generating enhanced audio...</div>';
+            
+            try {
+                const response = await fetch('/generate_audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        language: langCode,
+                        enhanced: true // Request enhanced quality
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.audio_url) {
+                    audioContainer.innerHTML = `
+                        <audio controls style="width: 100%;">
+                            <source src="${result.audio_url}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <small style="color: #666;">Enhanced ${langName} audio generated</small>
+                    `;
+                } else {
+                    audioContainer.innerHTML = `<span style="color: red;">Audio generation failed: ${result.error || 'Unknown error'}</span>`;
+                }
+            } catch (error) {
+                console.error('Audio generation error:', error);
+                audioContainer.innerHTML = '<span style="color: red;">Audio generation failed</span>';
+            }
+        }
+
+        // Enhanced translation with AI analysis
+        async function translateTextWithAI() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                showError('Please enter text to translate');
+                return;
+            }
+
+            // Real-time language detection if AI is ready
+            if (window.xenovaReady) {
+                try {
+                    const detectedLang = await detectLanguageXenova(text);
+                    if (detectedLang) {
+                        console.log('Detected language:', detectedLang);
+                    }
+                } catch (error) {
+                    console.error('Language detection failed:', error);
+                }
+            }
+
+            // Proceed with normal translation
+            translateText();
+        }
+
+        // Override the translate button to use AI enhancement
+        function enhanceTranslateButton() {
+            const translateBtn = document.getElementById('translateBtn');
+            if (translateBtn) {
+                translateBtn.onclick = translateTextWithAI;
+            }
+        }
+
+        // Auto-translation while typing
+        function setupAutoTranslation() {
+            const textInput = document.getElementById('textInput');
+            let translationTimeout;
+
+            textInput.addEventListener('input', function() {
+                clearTimeout(translationTimeout);
+                const text = textInput.value.trim();
+                
+                // Clear results if input is empty
+                if (!text) {
+                    document.getElementById('results').innerHTML = '';
+                    return;
+                }
+                
+                // Auto-translate after 1 second of no typing, minimum 3 characters
+                if (text.length >= 3) {
+                    translationTimeout = setTimeout(function() {
+                        var selectedLanguages = getSelectedLanguages();
+                        if (selectedLanguages.length === 0) {
+                            return; // Don't translate if no languages selected
+                        }
+                        
+                        // Perform translation silently
+                        fetch('/translate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                text: text,
+                                languages: selectedLanguages
+                            })
+                        })
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(result) {
+                            displayResults(text, result.translations, 'Auto-Translation');
+                        })
+                        .catch(function(error) {
+                            console.error('Auto-translation error:', error);
+                        });
+                    }, 1000);
+                }
+            });
+        }
+
+        // ALL VIDEO FUNCTIONALITY REMOVED AS REQUESTED
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupAutoTranslation();
+            enhanceTranslateButton();
+        });
+
+        function closeSubtitlePreview() {
+            if (window.currentSubtitleModal) {
+                document.body.removeChild(window.currentSubtitleModal);
+                window.currentSubtitleModal = null;
+            }
+        }
+
+        function getFlagEmoji(langCode) {
+            const flags = {
+                'es': '🇪🇸',
+                'pt': '🇵🇹',
+                'it': '🇮🇹', 
+                'fr': '🇫🇷',
+                'ru': '🇷🇺',
+                'zh-CN': '🇨🇳',
+                'uni': '🌟'
+            };
+            return flags[langCode] || '🌐';
+        }
+
+        function getLanguageName(code) {
+            const languages = {
+                'es': 'Spanish',
+                'pt': 'Portuguese', 
+                'it': 'Italian',
+                'fr': 'French',
+                'ru': 'Russian',
+                'zh-CN': 'Chinese',
+                'uni': 'UNI'
+            };
+            return languages[code] || code;
+        }
+
+        // Light mode toggle functionality
+        function toggleLightMode() {
+            const body = document.body;
+            const isLightMode = body.classList.contains('light-mode');
+            
+            if (isLightMode) {
+                // Switch to dark mode
+                body.classList.remove('light-mode');
+                body.style.background = '#000';
+                body.style.color = '#fff';
+                document.getElementById('lightModeBtn').innerHTML = '💡';
+                
+                // Update all elements for dark mode
+                updateThemeElements(false);
+                localStorage.setItem('lightMode', 'false');
+            } else {
+                // Switch to light mode
+                body.classList.add('light-mode');
+                body.style.background = '#fff';
+                body.style.color = '#000';
+                document.getElementById('lightModeBtn').innerHTML = '🌙';
+                
+                // Update all elements for light mode
+                updateThemeElements(true);
+                localStorage.setItem('lightMode', 'true');
+            }
+        }
+
+        // Update theme for all elements
+        function updateThemeElements(isLightMode) {
+            const root = document.documentElement;
+            
+            if (isLightMode) {
+                // Light mode colors
+                root.style.setProperty('--bg-color', '#fff');
+                root.style.setProperty('--text-color', '#000');
+                root.style.setProperty('--border-color', '#333');
+                root.style.setProperty('--btn-bg', 'rgba(0,0,0,0.1)');
+                root.style.setProperty('--panel-bg', 'rgba(255,255,255,0.95)');
+                root.style.setProperty('--input-bg', 'rgba(255,255,255,0.9)');
+                
+                // Update matrix background for elegant light mode
+                const matrixBg = document.querySelector('.matrix-bg');
+                if (matrixBg) {
+                    matrixBg.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%)';
+                }
+                
+                // Update UNI LINGUS logo for light mode
+                const logo = document.querySelector('.logo');
+                if (logo) {
+                    logo.style.color = '#000';
+                }
+            } else {
+                // Dark mode colors
+                root.style.setProperty('--bg-color', '#000');
+                root.style.setProperty('--text-color', '#fff');
+                root.style.setProperty('--border-color', '#fff');
+                root.style.setProperty('--btn-bg', 'rgba(255,255,255,0.1)');
+                root.style.setProperty('--panel-bg', 'rgba(0,0,0,0.8)');
+                root.style.setProperty('--input-bg', 'rgba(0,0,0,0.8)');
+                
+                // Restore matrix background for dark mode
+                const matrixBg = document.querySelector('.matrix-bg');
+                if (matrixBg) {
+                    matrixBg.style.background = 'radial-gradient(circle at 20% 50%, #001100 0%, transparent 50%), radial-gradient(circle at 80% 20%, #001100 0%, transparent 50%), linear-gradient(135deg, #000000 0%, #001100 100%)';
+                }
+                
+                // Restore UNI LINGUS logo for dark mode
+                const logo = document.querySelector('.logo');
+                if (logo) {
+                    logo.style.color = '#fff';
+                }
+            }
+            
+            // Update all panels and inputs with better contrast
+            const panels = document.querySelectorAll('#languagesPanel, #historyPanel, .results');
+            panels.forEach(panel => {
+                panel.style.background = isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.85)';
+                panel.style.border = isLightMode ? '1px solid #333' : '1px solid #fff';
+                panel.style.color = isLightMode ? '#000' : '#fff';
+                panel.style.boxShadow = isLightMode ? '0 2px 10px rgba(0,0,0,0.1)' : '0 2px 10px rgba(255,255,255,0.1)';
+            });
+            
+            // Update textarea with better styling
+            const textarea = document.getElementById('textInput');
+            if (textarea) {
+                textarea.style.background = isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.85)';
+                textarea.style.border = isLightMode ? '1px solid #333' : '1px solid #fff';
+                textarea.style.color = isLightMode ? '#000' : '#fff';
+                textarea.style.boxShadow = isLightMode ? '0 2px 5px rgba(0,0,0,0.1)' : '0 2px 5px rgba(255,255,255,0.1)';
+            }
+            
+            // Update buttons with better styling
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+                if (btn.id !== 'lightModeBtn') {
+                    btn.style.background = isLightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+                    btn.style.border = isLightMode ? '1px solid #333' : '1px solid #fff';
+                    btn.style.color = isLightMode ? '#000' : '#fff';
+                    btn.style.boxShadow = isLightMode ? '0 1px 3px rgba(0,0,0,0.1)' : '0 1px 3px rgba(255,255,255,0.1)';
+                }
+            });
+            
+            // Update header buttons
+            const botButton = document.querySelector('.bot-button');
+            if (botButton) {
+                botButton.style.background = isLightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)';
+                botButton.style.border = isLightMode ? '1px solid #333' : '1px solid #fff';
+                botButton.style.color = isLightMode ? '#000' : '#fff';
+            }
+        }
+
+        // Update language checkmarks visibility
+        function updateLanguageCheckmarks() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][value]');
+            checkboxes.forEach(function(checkbox) {
+                const checkmark = checkbox.parentElement.querySelector('.lang-check');
+                if (checkmark) {
+                    checkmark.style.display = checkbox.checked ? 'inline' : 'none';
+                }
+            });
+        }
+
+        // Initialize all features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup button event listeners
+            document.getElementById('chatBtn').addEventListener('click', chatWithAI);
+            // Video functionality removed as requested
+            // shopBtn removed - element doesn't exist in current template
+            
+            // Setup AI enhancements
+            setTimeout(function() {
+                enhanceTranslateButton();
+            }, 1000);
+
+            // Setup language checkbox listeners for checkmark visibility
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][value]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', updateLanguageCheckmarks);
+            });
+            
+            // Initialize checkmark visibility
+            updateLanguageCheckmarks();
+            
+            // Load saved light mode preference
+            const savedLightMode = localStorage.getItem('lightMode');
+            if (savedLightMode === 'true') {
+                document.body.classList.add('light-mode');
+                document.body.style.background = '#fff';
+                document.body.style.color = '#000';
+                document.getElementById('lightModeBtn').innerHTML = '🌙';
+                updateThemeElements(true);
+            }
+        });
+    </script>
+
+    <!-- UNI Correction Dialog -->
+    <div id="correctionDialog" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; background: linear-gradient(135deg, #ff6600, #ff8c42); color: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">🌟 Correct UNI Translation</h3>
+                <button onclick="closeCorrectionDialog()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Original Text:</label>
+                <input type="text" id="correctionOriginal" readonly style="width: 100%; padding: 8px; border: none; border-radius: 4px; background: rgba(255,255,255,0.9); color: #333;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Current Translation:</label>
+                <input type="text" id="correctionIncorrect" readonly style="width: 100%; padding: 8px; border: none; border-radius: 4px; background: rgba(255,255,255,0.7); color: #333;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Correct Translation:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="correctionCorrect" placeholder="Enter the correct translation..." style="flex: 1; padding: 8px; border: none; border-radius: 4px;">
+                    <button onclick="enhanceWithDeepSeek()" id="enhanceButton" title="Use DeepSeek-R1 AI to enhance this translation" style="background: linear-gradient(45deg, #ff6600, #ff9900); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-size: 12px; min-width: 120px;">
+                        ✨ ENHANCE
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Notes (optional):</label>
+                <textarea id="correctionNotes" placeholder="Add any notes about this correction..." style="width: 100%; padding: 8px; border: none; border-radius: 4px; height: 60px; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="text-align: right;">
+                <button onclick="closeCorrectionDialog()" style="background: rgba(255,255,255,0.3); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Cancel</button>
+                <button onclick="saveCorrectionDialog()" style="background: white; color: #ff6600; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer;">Save Correction</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UNI Correction Dialog Functions
+        let currentCorrectionData = {};
+        
+        function openCorrectionDialog(originalText, incorrectTranslation, sourceLang, targetLang) {
+            currentCorrectionData = {
+                original_text: originalText,
+                incorrect_translation: incorrectTranslation,
+                source_lang: sourceLang,
+                target_lang: targetLang
+            };
+            
+            document.getElementById('correctionOriginal').value = originalText;
+            document.getElementById('correctionIncorrect').value = incorrectTranslation;
+            document.getElementById('correctionCorrect').value = '';
+            document.getElementById('correctionNotes').value = '';
+            document.getElementById('correctionDialog').style.display = 'flex';
+        }
+        
+        function closeCorrectionDialog() {
+            document.getElementById('correctionDialog').style.display = 'none';
+            currentCorrectionData = {};
+        }
+        
+        function enhanceWithDeepSeek() {
+            const originalText = currentCorrectionData.original_text;
+            const currentTranslation = currentCorrectionData.incorrect_translation;
+            
+            if (!originalText || !currentTranslation) {
+                alert('Missing translation data for enhancement');
+                return;
+            }
+            
+            const enhanceButton = document.getElementById('enhanceButton');
+            const originalText_btn = enhanceButton.innerHTML;
+            enhanceButton.innerHTML = '⏳ ENHANCING...';
+            enhanceButton.disabled = true;
+            
+            fetch('/enhance_uni_ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    original_text: originalText,
+                    current_translation: currentTranslation
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                enhanceButton.innerHTML = originalText_btn;
+                enhanceButton.disabled = false;
+                
+                if (result.success && result.enhanced_translation) {
+                    document.getElementById('correctionCorrect').value = result.enhanced_translation;
+                    const notesField = document.getElementById('correctionNotes');
+                    const currentNotes = notesField.value.trim();
+                    const enhancementNote = "Enhanced with AI for better UNI grammar compliance";
+                    notesField.value = currentNotes ? currentNotes + '\n\n' + enhancementNote : enhancementNote;
+                    alert('✨ Translation enhanced with AI! Review the improved UNI translation.');
+                } else {
+                    alert('❌ Enhancement failed: ' + (result.error || 'AI could not improve the translation'));
+                }
+            })
+            .catch(error => {
+                enhanceButton.innerHTML = originalText_btn;
+                enhanceButton.disabled = false;
+                console.error('Enhancement error:', error);
+                alert('❌ Enhancement failed. Please try again.');
+            });
+        }
+        
+        function saveCorrectionDialog() {
+            const correctTranslation = document.getElementById('correctionCorrect').value.trim();
+            
+            if (!correctTranslation) {
+                alert('Please enter the correct translation');
+                return;
+            }
+            
+            const correctionData = {
+                ...currentCorrectionData,
+                correct_translation: correctTranslation,
+                notes: document.getElementById('correctionNotes').value.trim()
+            };
+            
+            fetch('/uni_correction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(correctionData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('✅ Correction saved! This will improve future UNI translations.');
+                    closeCorrectionDialog();
+                } else {
+                    alert('❌ Failed to save correction: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error saving correction:', error);
+                alert('❌ Failed to save correction. Please try again.');
+            });
+        }
+        
+        // Modal styling
+        const modalStyle = document.createElement('style');
+        modalStyle.textContent = `
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+                justify-content: center;
+                align-items: center;
+            }
+            .modal-content {
+                background: white;
+                margin: auto;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                position: relative;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+        `;
+        document.head.appendChild(modalStyle);
+        
+        // Simple word hover - NO CLICKING, NO WINDOWS, NO MODALS
+        // All complex word definition functionality removed as requested
+        
+        // UNI Grammar Modal function with improved mobile layout
+        function showUniGrammarModal() {
+            // Create modal with responsive design - adapts to light/dark mode
+            const isDarkMode = !document.body.classList.contains('light-mode');
+            const modalBg = isDarkMode ? 'rgba(0, 0, 0, 0.9)' : 'rgba(240, 244, 248, 0.95)';
+            const contentBg = isDarkMode ? '#000' : 'linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%)';
+            const textColor = isDarkMode ? '#fff' : '#2c3e50';
+            const borderColor = isDarkMode ? '#fff' : '#bdc3c7';
+            const headerBg = isDarkMode ? '#000' : 'linear-gradient(135deg, #ffffff 0%, #ecf0f1 100%)';
+            
+            const modalHTML = '<div id="uniGrammarModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: ' + modalBg + '; z-index: 10000; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 0;">' +
+                '<div style="background: ' + contentBg + '; color: ' + textColor + '; padding: 20px 20px 150px 20px; border-radius: 10px; border: 1px solid ' + borderColor + '; width: calc(100% - 20px); max-width: 95vw; min-height: calc(100vh - 40px); overflow-x: hidden; position: relative; font-family: \'JetBrains Mono\', monospace; line-height: 1.6; font-size: 13px; margin: 10px; word-wrap: break-word; box-sizing: border-box; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);">' +
+                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid ' + borderColor + '; padding-bottom: 15px; position: sticky; top: 0; background: ' + headerBg + '; z-index: 1;">' +
+                '<h2 style="margin: 0; color: ' + textColor + '; font-size: 18px;">📚 UNI LANGUAGE</h2>' +
+                '<button onclick="document.getElementById(\'uniGrammarModal\').remove()" style="background: none; border: 1px solid ' + borderColor + '; color: ' + textColor + '; font-size: 18px; cursor: pointer; padding: 5px 10px; border-radius: 3px; transition: all 0.3s ease;">&times;</button>' +
+                '</div>' +
+                '<div style="white-space: pre-wrap; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; font-size: 14px; color: ' + textColor + ';">UNI is a simplified constructed language. It\'s much easier to learn and speak than any language you know. If you speak any Romance language you will understand 70% of this dialogue:\n\nA: OI, KOMU VIDA? KE NOVU?\n(Hey how is life? What\'s new?)\n\nB: OI, VIDA FELISU, MA KOMENSO ESTUDAR LINGUA ARTIFISIALU NOVU.\n(Hey, life is a joy, I began to study a new artificial language)\n\nA: KE SIGNIFIKAR? LINGUA KONSTRUKTUDU, KOMU ESPERANTA?\n(What does that mean? A constructed language, like Esperanto?)\n\nB: SIMILU, SI.\n(Similar, yes.)\n\nA: NO DIFISILU APRENDAR? NORMALU NESESITAR MUITU TEMPA INTENDAR GRAMATIKA, PRONUNSIA, MEMORIZAR FRAZAS NO KONOSUDU?\n(Isn\'t it difficult to learn? You normally need a lot of time to understand grammar, pronunciation, to memorise unfamiliar phrases?)\n\nB: REALU NO, VERDA KE NO FALARE RAPIDU MESMU DIA, PERU PODAR ESPLIKAR KOZAS BAZIKU.\n(Not really, the truth is, you aren\'t going to start speaking fast the same day, but you can explain basic things.)\n\nA: SOLU IN UNA DIA? KOMU POSIBLU?\n(Just in one day? How is this possible)\n\nB: PARUKE MUITU PARESADU IDIOMAS ROMANU I KOMU NA JA FALAR ESPANIOLA I PORTUGEZA, SARE MUITU FASILU. NA ENTENDARE META PALAVRAS INTUITIVU. PROBABILU 90% PERSENTA VOCABULARIA SAREBE FAMILIARU.\n(Because it\'s very similar to Romance languages and since you already speak Spanish and Portuguese, It will be very easy. You\'ll understand a half of words intuitively. Probably 90% per cent of the vocabulary would be familiar.)\n\nA: LOKU! PERU KE OTRU KOZAS SIMPLIFIKAR PROSESA? ESPANIOLA MAU IDIOMA NATIVU PERU PRONUNSIA PORTUGEZA SARO DIFISILU IN KOMENSA.\n(Crazy! But what other things simplify the process? Spanish is my native language but Portuguese pronunciation was difficult in the beginning.)\n\nB: REGLAS TOTALU MINIMU. NO GENERAS PARU SUSTANTIVAS, SOU NO PREOKUPAR SA KON MASKULINU O FEMININO. SUSTANTIVAS SIMPLU TERMINAR KON -A PARU SINGULARU I -AS PARU PLURALU. TIPU \'\'Book" SAREBE LIBRA I \'\'Books\'\' SAREBE LIBRAS.\n(The rules are totally minimal. No genders for nouns, so don\'t worry about masculine or feminine. The nouns simply end with -A for singular and -AS for plural. Like "a book" would be LIBRA and "books" would be LIBRAS.)\n\nA: I VERBAS?\n(And verbs?)\n\nB: KUASU MESMU FASILU. SOLU TRA TEMPAS PRINSIPALU: ADISIONAR -AR UZANDU PRESENTU, -RO IN PASADU I -RE KON FUTURU. NO VERBAS NOREGULARU.\n(Almost as easy. Just three principal tenses: add -AR using present, -RO in the past and -RE with the future tense. No irregular verbs.)\n\nA: WOW! NO KONJUGARA?\n(Wow! No conjugations?)\n\nB: EZATU! KOMU NA FALAREBE \'\'love to sing" ?\n(Exactly! How would you say \'\'love to sing"?)\n\nA: AMAR KANTAR.\n(Love to sing.)\n\nB: KOREKTU! NA JA PRAKTIKU NATIVU!\n(Correct! You are already practically a native)\n\nA: DEFINITIVU FASILITAR KOMUNIKA. KERAR PRAKTIKAR PROKSIMA SEMANA! DIVERTANDU!\n(It definitely facilitates communication. I want to practice next week! It\'s entertaining!)\n\n\nGRAMMAR:\n\n1. Simplified alphabet:\nThere are only 21 letters in full version and 15 letters in simplified (whisper) version where voiced consonants are substituted with their voiceless equivalents.\n\nUNI is a UNICASE language which means all letters are typographically the same regardless of size. Their visual form mirrors capital or upper case English alphabet letters. There are no small or lowercase letters for simplicity. Since there are yet no keyboards making Capital letters small without changing their visual forms, we\'ll just use ALL CAPS for now.\n\nEnglish\nA B C D E F G H I J K L M N O P Q R S T U V W X Y Z\n\nUNI (5 Vowels and 16 Consonants)\nA B — D E F G — I J K L M N O P — R S T U V — X — Z\n\nUNI whisper (5 vowels and 10 consonants)\nA — — — E F — — I — K L M N O P — R S T U — — X — —\n\n(— means the corresponding letter doesn\'t exist)\n\n2. Simplified Pronunciation:\nUNI has a phonetic spelling system, so every letter is pronounced the same way as it\'s written, no matter where it appears in a word.\n\nVowels: A O U E I\nA as in father, rather\nE as in met, pet\nI as in machine, marine\nO as in for, sport\nU as in rule, bull\n\nSimplified (whisper) version changes replaceable voiced consonants to voiceless ones:\nB→P, D→T, G→K, J→X, V→F, Z→S\n\nB - P (B as in Barbara and P as in Peter)\nD - T (D as in down and T as in top)\nG - K (G as in green and K as in kind)\nJ - X (J as in measure and X as in short )\nV - F (V as in very and F as in fine)\nZ - S (Z as in zero and S as in smart)\n\nVoiced letters:\nL - L (as in later)\nM - M (as in meter)\nN - N (as in normal)\nR - R (as in robot)\n\nKOZA BAZIKU → KOSA BASIKU\nPORTUGESA → PORTUKESA\nVIDA NOVU → FITA NOFU\n\n3. Simplified grammar system with only 3 tenses, no genders, cases or irregular verbs. Every word follows a set of rules so you can predict how to form new words and phrases.\n\nPresent -AR. I liberate - MA LIBERAR\nPast -RO. I liberated - MA LIBERÒ\nFuture -RE. I will liberate - MA LIBERÈ\nConditional -RÈBE. I would liberate - MA LIBERÈBE\nContinuous -ÀNDU. I am liberating - MA LIBERÀNDU\nImperative mood -RÌ. Liberate! - LIBERÌ!\n\nNeutral adjectives -U. Quick cat - RAPIDU KATA.\nActive adjectives/adverbs -ADU. A lovely mother - AMA(RU)DU MAMA.\nPassive adjectives -UDU. A loved mother - AMUDU MAMA.\nActive continuous participle gerund -ANDU. (A/the) Loving (a/the) mother - AMANDU MAMA. (Use an article not to confuse "a loving mother" with "loving a mother"\nPassive continuous participle gerund -UNDU. Being loved (by a) mother - AMUNDU (PORU) MAMA.\nNoun-to-verb conversions are possible. BONA - good thing. BONAR - to do well, to improve.\n\nMAS LIBERAR LINGUA SIMPLIFIKANDO PRONUNSIA I GRAMATIKA.\n(We liberate language by simplifying pronunciation and grammar.)\n\nAll nouns regardless of gender end in -A in singular form and -AS in plural.\n\nHuman - UMANA\nPlanets - PLANETAS\nUniverse - UNIVERSA\n\nPersonal Pronouns:\n\nI - MA                  We - MAS\nYou - NA             You - NAS\nHe, she, It - TA   They - TAS\n\nTA is borrowed from spoken Chinese, where it\'s pronounced the same both for men and women even though the characters are different: 她, 他 [tā]\n\nMA AMAR NA (I love you), TAS AMAR MAS (They love us).\n\nPossessive Pronouns:\n\nMy - MAU                  Our - MAUS\nYour - NAU                Yours - NAUS\nHis, her, its\' - TAU     Theirs - TAUS\n\nNA GUSTAR NAU GATA (She likes her cat)\n\nReflexive verbs: -SA for self. She loves herself - TA AMAR SA.\nReciprocal verbs: -UNA OTRA for each other. They love each other - TAS AMAR UNA OTRA.\nComparison: good, better, the best - BONU, PLU BONU, PLUS BONU\nNegation: not bad - NO MALU\n\nUni has a flexible word order structure that can be changed to emphasise different parts of the sentence, or to create different shades of meaning. The default is SVO (Subject-Verb-Object) similar to English/Chinese.\n\nEnglish: The cat eats the fish.\nChinese: 猫吃鱼. (Māo chī yú.) - Cat eat fish.\nUNI: KATA KOMAR PESKA - Cat eat fish.\n\n4. Simplified Prepositions\n\nOr: O\nAnd: I\nOf: DU\nSo: SOU\nAs: KOMU\nFor: PARU\nBut: PERU\nBy, through: PORU\nAlthough: EMBORU\n\nIf, unless: SE, A MENOS SE\nAt: AT\nIn (on), out (off): IN, NOIN / FORU\nTo (for), from (away): A, DA\nWith (and), without: KON, NOKON / SEN\nLeft, right: LETU, NOLETU / RETU\nDown, up: BAXU, NOBAXU / SIMU\nSub/under, super/over: SUB, NOSUB / SUPER\nSince, until: DEZDU, ATU\nAbout, around: SOBRU, REDORU\nClockwise, counterclockwise: IN SENTIDA ORARIU, NOINU SENTIDA ORARIU\nBefore, after: ANTU, NOANTU / DEPU\n\n5. Simplified Questions\n\nYes/no questions are formed by adding an optional "KA" at the beginning or the end of the sentence if necessary but usually the question is just marked with intonation.\n\nExample: (KA) NA AMORAR MA (Do you love me?) or NA AMAR MA KA? (Do you love me?)\n\nWh-questions use interrogative pronouns like KE (what), KEN (who), KUAL (which), KUANDU (when), KONDE (where), PARU KE (why), and KOMU (how).\n\n6. Simplified Numbers\n\nCardinal numbers:\n\n0: NULA\n1: UNA\n2: DUA\n3: TRA\n4: KUATRA\n5: SINKA\n6: SESA\n7: SETA\n8: OKTA\n9: NOVA\n10: DEKA\n11–19: DEKA-UNA, DEKA-DUA etc\n20: DUA-DEKA\n30: TRA DEKA\n100: SENTA\n1000: MILA\n\nExamples: 21 (DUA-DEKA-UNA), 123 (SENTA-DUA-TRA), 2025 (DUA-MILA-SENTA-DUA-DEKA).\n\nOrdinal numbers:\nAdd -U: UNU (first), DUU (second), TRU (third), DEKA-UNU (eleventh), DUA-DEKU (twentieth).\n\nFractions:\nUse -DA: DUADA (half), TRADA (third), KUATRADA (quarter).\n\nLarge numbers:\nUse MILA for thousand, MILIONA for million, etc., for scalability.\n\n7. Optional elements, that are only used if absolutely necessary:\n\nAdverbs -RU. To go quick(ly) - ANDAR RAPIDU(RU).\nArticles (definite the -LA, indefinite a/an -UNA). A cat - (UNA) KATA. The cat - (LA) KATA.\nVerb to be (SAR) It\'s a cat - TA (SAR) (UNA) KATA.\nTense suffixes If time words are used: Tomorrow I\'ll go to school - MANIANA MA ANDAR(E) (A) SKOLA.\nHere/There is a book - ALI/AKI (SAR) (UNA) LIBRA.\n\nThe cat is looking at a cat but it is not sure if it\'s a cat - (LA) KATA VERANDU (AT) (UNA) KATA PERU TA NO SEGURU SE TA (SAR) (UNA) KATA. Simplified: KATA VERAR KATA PERU NO SEGURU SE TA KATA.\n\n═══════════════════════════════════════════════════════════════════════════════\n📚 50 MOST COMMON VERBS - MULTILINGUAL COMPARISON\n═══════════════════════════════════════════════════════════════════════════════\n\n<div style="display: grid; gap: 10px; margin: 20px 0;">\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">1. TO BE</strong>\n• English: I am a student\n• Spanish: Soy estudiante\n• Portuguese: Sou estudante\n• Italian: Sono studente\n• French: Je suis étudiant\n🎯 <strong style="color: #FFD700;">UNI: MA ESTUDIANTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">2. TO HAVE</strong>\n• English: I have a book\n• Spanish: Tengo un libro\n• Portuguese: Tenho um livro\n• Italian: Ho un libro\n• French: J\'ai un livre\n• German: Ich habe ein Buch\n🎯 <strong style="color: #FFD700;">UNI: MA TENAR LIBRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">3. TO DO</strong>\n• English: I do my work\n• Spanish: Hago mi trabajo\n• Portuguese: Faço meu trabalho\n• Italian: Faccio il mio lavoro\n• French: Je fais mon travail\n• Esperanto: Mi faras mian laboron\n• German: Ich mache meine Arbeit\n🎯 <strong style="color: #FFD700;">UNI: MA FAR LABORA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">4. TO SAY</strong>\n• English: I say a word\n• Spanish: Digo una palabra\n• Portuguese: Digo uma palavra\n• Italian: Dico una parola\n• French: Je dis un mot\n• Esperanto: Mi diras vorton\n• German: Ich sage ein Wort\n🎯 <strong style="color: #FFD700;">UNI: MA DIZAR PALAVRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">5. TO GO</strong>\n• English: I go to school\n• Spanish: Voy a la escuela\n• Portuguese: Vou à escola\n• Italian: Vado a scuola\n• French: Je vais à l\'école\n• Esperanto: Mi iras al lernejo\n• German: Ich gehe zur Schule\n🎯 <strong style="color: #FFD700;">UNI: MA ANDAR SKOLA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">6. TO GET</strong>\n• English: I get a gift\n• Spanish: Consigo un regalo\n• Portuguese: Consigo um presente\n• Italian: Ottengo un regalo\n• French: J\'obtiens un cadeau\n• Esperanto: Mi akiras donacon\n• German: Ich bekomme ein Geschenk\n🎯 <strong style="color: #FFD700;">UNI: MA OBTAR REGALA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">7. TO MAKE</strong>\n• English: I make a cake\n• Spanish: Hago un pastel\n• Portuguese: Faço um bolo\n• Italian: Faccio una torta\n• French: Je fais un gâteau\n• Esperanto: Mi faras kukon\n• German: Ich mache einen Kuchen\n🎯 <strong style="color: #FFD700;">UNI: MA FAZAR BOLA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">8. TO KNOW</strong>\n• English: I know a fact\n• Spanish: Sé un hecho\n• Portuguese: Sei um fato\n• Italian: So un fatto\n• French: Je sais un fait\n• Esperanto: Mi scias fakton\n• German: Ich weiß eine Tatsache\n🎯 <strong style="color: #FFD700;">UNI: MA SABAR FAKTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">9. TO THINK</strong>\n• English: I think about life\n• Spanish: Pienso en la vida\n• Portuguese: Penso na vida\n• Italian: Penso alla vita\n• French: Je pense à la vie\n• Esperanto: Mi pensas pri vivo\n• German: Ich denke an das Leben\n🎯 <strong style="color: #FFD700;">UNI: MA PENSAR SOBRU VIDA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">10. TO TAKE</strong>\n• English: I take a book\n• Spanish: Tomo un libro\n• Portuguese: Tomo um livro\n• Italian: Prendo un libro\n• French: Je prends un livre\n• Esperanto: Mi prenas libron\n🎯 <strong style="color: #FFD700;">UNI: MA TOMAR LIBRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">11. TO SEE</strong>\n• English: I see a star\n• Spanish: Veo una estrella\n• Portuguese: Vejo uma estrela\n• Italian: Vedo una stella\n• French: Je vois une étoile\n• Esperanto: Mi vidas stelon\n• German: Ich sehe einen Stern\n🎯 <strong style="color: #FFD700;">UNI: MA VERAR ESTRELA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">12. TO COME</strong>\n• English: I come to the party\n• Spanish: Vengo a la fiesta\n• Portuguese: Venho à festa\n• Italian: Vengo alla festa\n• French: Je viens à la fête\n• Esperanto: Mi venas al festo\n• German: Ich komme zur Party\n🎯 <strong style="color: #FFD700;">UNI: MA VENAR FESTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">13. TO WANT</strong>\n• English: I want a coffee\n• Spanish: Quiero un café\n• Portuguese: Quero um café\n• Italian: Voglio un caffè\n• French: Je veux un café\n• Esperanto: Mi volas kafon\n• German: Ich will einen Kaffee\n🎯 <strong style="color: #FFD700;">UNI: MA KERAR KAFA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">14. TO USE</strong>\n• English: I use a pen\n• Spanish: Uso un bolígrafo\n• Portuguese: Uso uma caneta\n• Italian: Uso una penna\n• French: J\'utilise un stylo\n• Esperanto: Mi uzas plumon\n🎯 <strong style="color: #FFD700;">UNI: MA UZAR BOLIGRAFA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">15. TO FIND</strong>\n• English: I find a key\n• Spanish: Encuentro una llave\n• Portuguese: Encontro uma chave\n• Italian: Trovo una chiave\n• French: Je trouve une clé\n• Esperanto: Mi trovas ŝlosilon\n• German: Ich finde einen Schlüssel\n🎯 <strong style="color: #FFD700;">UNI: MA ENKONTRAR XAVA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">16. TO GIVE</strong>\n• English: I give a flower\n• Spanish: Doy una flor\n• Portuguese: Dou uma flor\n• Italian: Do un fiore\n• French: Je donne une fleur\n• Esperanto: Mi donas floron\n• German: Ich gebe eine Blume\n• Russian: Я даю цветок (Ya dayu tsvetok)\n🎯 <strong style="color: #FFD700;">UNI: MA DAR FLORA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">17. TO TELL</strong>\n• English: I tell a story\n• Spanish: Cuento una historia\n• Portuguese: Conto uma história\n• Italian: Racconto una storia\n• French: Je raconte une histoire\n• Esperanto: Mi diras rakonton\n🎯 <strong style="color: #FFD700;">UNI: MA KONTAR ISTORIA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">18. TO WORK</strong>\n• English: I work in an office\n• Spanish: Trabajo en una oficina\n• Portuguese: Trabalho em um escritório\n• Italian: Lavoro in un ufficio\n• French: Je travaille dans un bureau\n• Esperanto: Mi laboras en oficejo\n• German: Ich arbeite in einem Büro\n🎯 <strong style="color: #FFD700;">UNI: MA TRABALIAR IN OFISA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">19. TO CALL</strong>\n• English: I call my friend\n• Spanish: Llamo a mi amigo\n• Portuguese: Chamo meu amigo\n• Italian: Chiamo il mio amico\n• French: J\'appelle mon ami\n• Esperanto: Mi vokas mian amikon\n🎯 <strong style="color: #FFD700;">UNI: MA XAMAR AMIGA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">20. TO TRY</strong>\n• English: I try new food\n• Spanish: Pruebo comida nueva\n• Portuguese: Provo comida nova\n• Italian: Provo cibo nuovo\n• French: J\'essaie de la nourriture nouvelle\n• Esperanto: Mi provas novan manĝaĵon\n🎯 <strong style="color: #FFD700;">UNI: MA PROVAR KOMIDA NOVU</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">21. TO ASK</strong>\n• English: I ask a question\n• Spanish: Pregunto una pregunta\n• Portuguese: Pergunto uma pergunta\n• Italian: Chiedo una domanda\n• French: Je pose une question\n• Esperanto: Mi demandas demandon\n🎯 <strong style="color: #FFD700;">UNI: MA PREGUNTAR PREGUNTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">22. TO NEED</strong>\n• English: I need a book\n• Spanish: Necesito un libro\n• Portuguese: Preciso de um livro\n• Italian: Ho bisogno di un libro\n• French: J\'ai besoin d\'un livre\n• Esperanto: Mi bezonas libron\n🎯 <strong style="color: #FFD700;">UNI: MA NESESITAR LIBRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">23. TO FEEL</strong>\n• English: I feel happy\n• Spanish: Me siento feliz\n• Portuguese: Sinto-me feliz\n• Italian: Mi sento felice\n• French: Je me sens heureux\n• Esperanto: Mi sentas min feliĉa\n• German: Ich fühle mich glücklich\n🎯 <strong style="color: #FFD700;">UNI: MA SENTIRAR FELIZU</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">24. TO BECOME</strong>\n• English: I become a teacher\n• Spanish: Me convierto en profesor\n• Portuguese: Torno-me professor\n• Italian: Divento professore\n• German: Ich werde Lehrer\n🎯 <strong style="color: #FFD700;">UNI: MA TORNAR PROFESORA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">25. TO LEAVE</strong>\n• English: I leave the house\n• Spanish: Dejo la casa\n• Portuguese: Deixo a casa\n• Italian: Lascio la casa\n• French: Je quitte la maison\n• Esperanto: Mi lasas la domon\n• German: Ich verlasse das Haus\n🎯 <strong style="color: #FFD700;">UNI: MA DEXAR KAZA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">26. TO PUT</strong>\n• English: I put a book on the table\n• Spanish: Pongo un libro en la mesa\n• Portuguese: Coloco um livro na mesa\n• Italian: Metto un libro sul tavolo\n• French: Je mets un livre sur la table\n• Esperanto: Mi metas libron sur la tablon\n🎯 <strong style="color: #FFD700;">UNI: MA KOLOKAR LIBRA ANU MEZA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">27. TO MEAN</strong>\n• English: I mean to help\n• Italian: Intendo aiutare\n• French: Je veux dire aider\n• Esperanto: Mi intencas helpi\n🎯 <strong style="color: #FFD700;">UNI: MA SIGNIFIKAR AJUDAR</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">28. TO KEEP</strong>\n• English: I keep my promise\n• Spanish: Mantengo mi promesa\n• Portuguese: Mantenho minha promessa\n• Italian: Mantengo la mia promessa\n• French: Je tiens ma promesse\n• Esperanto: Mi tenas mian promeson\n🎯 <strong style="color: #FFD700;">UNI: MA MANTENAR PROMESA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">29. TO LET</strong>\n• English: I let her go\n• Spanish: Dejo que ella vaya\n• Portuguese: Deixo que ela vá\n• Italian: Lascio che lei vada\n• French: Je laisse qu\'elle aille\n• Esperanto: Mi lasas ŝin iri\n• German: Ich lasse sie gehen\n🎯 <strong style="color: #FFD700;">UNI: MA DEXAR TA ANDAR</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">30. TO BEGIN</strong>\n• English: I begin a new project\n• Spanish: Comienzo un nuevo proyecto\n• Portuguese: Começo um novo projeto\n• Italian: Inizio un nuovo progetto\n• French: Je commence un nouveau projet\n• Esperanto: Mi komencas novan projekton\n• German: Ich beginne ein neues Projekt\n🎯 <strong style="color: #FFD700;">UNI: MA KOMENSAR PROJEKTA NOVU</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">31. TO WRITE</strong>\n• English: I write a letter\n• Spanish: Yo escribo una carta\n• Portuguese: Eu escrevo uma carta\n• Italian: Io scrivo una lettera\n• French: J\'écris une lettre\n• Esperanto: Mi skribas leteron\n🎯 <strong style="color: #FFD700;">UNI: MA SKRIBAR LETRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">32. TO READ</strong>\n• English: She reads a book\n• Spanish: Ella lee un libro\n• Portuguese: Ela lê um livro\n• Italian: Lei legge un libro\n• French: Elle lit un livre\n• Esperanto: Ŝi legas libron\n🎯 <strong style="color: #FFD700;">UNI: TA LAR LIBRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">33. TO EAT</strong>\n• English: We eat an apple\n• Spanish: Nosotros comemos una manzana\n• Portuguese: Nós comemos uma maçã\n• Italian: Noi mangiamo una mela\n• French: Nous mangeons une pomme\n• Esperanto: Ni manĝas pomon\n🎯 <strong style="color: #FFD700;">UNI: MAS KOMAR MANZANA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">34. TO DRINK</strong>\n• English: He drinks water\n• Spanish: Él bebe agua\n• Portuguese: Ele bebe água\n• Italian: Lui beve acqua\n• French: Il boit de l\'eau\n• Esperanto: Li trinkas akvon\n🎯 <strong style="color: #FFD700;">UNI: TA BEBAR AGUA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">35. TO LISTEN</strong>\n• English: They listen to music\n• Spanish: Ellos escuchan música\n• Portuguese: Eles escutam música\n• Italian: Loro ascoltano musica\n• French: Ils écoutent de la musique\n• Esperanto: Ili aŭskultas muzikon\n🎯 <strong style="color: #FFD700;">UNI: TAS ESKUTAR MUZIKA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">36. TO WATCH</strong>\n• English: I watch a movie\n• Spanish: Yo veo una película\n• Portuguese: Eu assisto a um filme\n• Italian: Io guardo un film\n• French: Je regarde un film\n• Esperanto: Mi rigardas filmon\n🎯 <strong style="color: #FFD700;">UNI: MA VERAR FILMA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">37. TO PLAY</strong>\n• English: The children play soccer\n• Spanish: Los niños juegan al fútbol\n• Portuguese: As crianças jogam futebol\n• Italian: I bambini giocano a calcio\n• French: Les enfants jouent au football\n• Esperanto: La infanoj ludas futbalon\n🎯 <strong style="color: #FFD700;">UNI: NINAS JOGAR FUTBOLA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">38. TO BUY</strong>\n• English: She buys a dress\n• Spanish: Ella compra un vestido\n• Portuguese: Ela compra um vestido\n• Italian: Lei compra un vestito\n• French: Elle achète une robe\n• Esperanto: Ŝi aĉetas robon\n🎯 <strong style="color: #FFD700;">UNI: TA KOMPRAR VESTIDA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">39. TO SELL</strong>\n• English: He sells a car\n• Spanish: Él vende un coche\n• Portuguese: Ele vende um carro\n• Italian: Lui vende una macchina\n• French: Il vend une voiture\n• Esperanto: Li vendas aŭton\n🎯 <strong style="color: #FFD700;">UNI: TA VENDAR AUTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">40. TO DRIVE</strong>\n• English: I drive a car\n• Spanish: Yo conduzco un coche\n• Portuguese: Eu dirijo um carro\n• Italian: Io guido una macchina\n• French: Je conduis une voiture\n• Esperanto: Mi veturas aŭton\n🎯 <strong style="color: #FFD700;">UNI: MA KONDUAR AUTA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">41. TO LOVE</strong>\n• English: They love each other\n• Spanish: Ellos se aman\n• Portuguese: Eles se amam\n• Italian: Loro si amano\n• French: Ils s\'aiment\n• Esperanto: Ili amas unu la alian\n🎯 <strong style="color: #FFD700;">UNI: TAS AMAR UNA OTRA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">42. TO HELP</strong>\n• English: She helps her friend\n• Spanish: Ella ayuda a su amigo\n• Portuguese: Ela ajuda o amigo\n• Italian: Lei aiuta il suo amico\n• French: Elle aide son ami\n• Esperanto: Ŝi helpas sian amikon\n🎯 <strong style="color: #FFD700;">UNI: TA AJUDAR AMIGA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">43. TO LEARN</strong>\n• English: We learn new things\n• Spanish: Nosotros aprendemos cosas nuevas\n• Portuguese: Nós aprendemos coisas novas\n• Italian: Noi impariamo cose nuove\n• French: Nous apprenons de nouvelles choses\n• Esperanto: Ni lernas novajn aferojn\n🎯 <strong style="color: #FFD700;">UNI: MAS APRENDAR KOZAS NOVU</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">44. TO TEACH</strong>\n• English: He teaches English\n• Spanish: Él enseña inglés\n• Portuguese: Ele ensina inglês\n• Italian: Lui insegna inglese\n• French: Il enseigne l\'anglais\n• Esperanto: Li instruas anglan\n🎯 <strong style="color: #FFD700;">UNI: TA ENSENAR INGLEZA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">45. TO BUILD</strong>\n• English: They build a house\n• Spanish: Ellos construyen una casa\n• Portuguese: Eles constroem una casa\n• Italian: Loro costruiscono una casa\n• French: Ils construisent une maison\n• Esperanto: Ili konstruas domon\n🎯 <strong style="color: #FFD700;">UNI: TAS KONSTRUAR KAZA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">46. TO SEND</strong>\n• English: I send a message\n• Spanish: Yo envío un mensaje\n• Portuguese: Eu envio uma mensagem\n• Italian: Io mando un messaggio\n• French: J\'envoie un message\n• Esperanto: Mi sendas mesaĝon\n🎯 <strong style="color: #FFD700;">UNI: MA ENVIAR MESAJA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">47. TO RECEIVE</strong>\n• English: She receives a gift\n• Spanish: Ella recibe un regalo\n• Portuguese: Ela recebe um presente\n• Italian: Lei riceve un regalo\n• French: Elle reçoit un cadeau\n• Esperanto: Ŝi ricevas donacon\n🎯 <strong style="color: #FFD700;">UNI: TA RESEBAR REGALA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">48. TO MEET</strong>\n• English: We meet new people\n• Spanish: Nosotros conocemos gente nueva\n• Portuguese: Nós conhecemos pessoas novas\n• Italian: Noi conosciamo persone nuove\n• French: Nous rencontrons de nouvelles personnes\n• Esperanto: Ni renkontas novajn homojn\n🎯 <strong style="color: #FFD700;">UNI: MAS KONOSAR PERSONAS NOVU</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">49. TO LIVE</strong>\n• English: They live in a city\n• Spanish: Ellos viven en una ciudad\n• Portuguese: Eles vivem em uma cidade\n• Italian: Loro vivono in una città\n• French: Ils vivent dans une ville\n🎯 <strong style="color: #FFD700;">UNI: TAS VIVAR IN SIDADA</strong>\n</div>\n\n<div style="border: 1px solid #444; border-radius: 6px; padding: 10px; background: #111;">\n<strong style="color: #87CEEB;">50. TO RUN</strong>\n• English: You run fast\n• Spanish: Corres rápido\n• Portuguese: Você corre rápido\n• Italian: Corri velocemente\n• French: Tu cours vite\n🎯 <strong style="color: #FFD700;">UNI: NAS KORAR RAPIDU</strong>\n</div>\n\n</div></div>' +
+                '</div>' +
+                '</div>';
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Apply light mode styling to verb boxes if needed
+            if (!isDarkMode) {
+                setTimeout(() => {
+                    const modal = document.getElementById('uniGrammarModal');
+                    if (modal) {
+                        // Find all verb comparison boxes (div with background: #111)
+                        const allDivs = modal.querySelectorAll('div[style*="background: #111"]');
+                        allDivs.forEach(div => {
+                            // Update the div background and border colors
+                            div.style.background = 'linear-gradient(135deg, rgba(236, 240, 241, 0.8) 0%, rgba(224, 229, 236, 0.6) 100%) !important';
+                            div.style.borderColor = '#5dade2';
+                            div.style.color = '#2c3e50';
+                        });
+                        
+                        // Update all light blue text (#87CEEB) to dark blue for light mode
+                        const allStrongs = modal.querySelectorAll('strong[style*="color: #87CEEB"]');
+                        allStrongs.forEach(strong => {
+                            strong.style.color = '#2980b9';
+                        });
+                        
+                        // Update all gold text (#FFD700) to warm gold for light mode
+                        const allGolds = modal.querySelectorAll('strong[style*="color: #FFD700"]');
+                        allGolds.forEach(gold => {
+                            gold.style.color = '#d68910';
+                        });
+                        
+                        // Update all bullet point colors
+                        const allBullets = modal.querySelectorAll('div[style*="#888"]');
+                        allBullets.forEach(bullet => {
+                            bullet.style.color = '#555';
+                        });
+                    }
+                }, 50);
+            }
+            
+            // Close on overlay click
+            document.getElementById('uniGrammarModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.remove();
+                }
+            });
+        }
+        
+    </script>
+</body>
+</html>
