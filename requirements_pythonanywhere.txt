@@ -1,0 +1,44 @@
+# UNI LINGUS - Lightweight Version for PythonAnywhere
+# Core dependencies only - removes heavy ML packages
+
+# Flask and web framework
+flask>=3.1.0
+flask-sqlalchemy>=3.1.1
+flask-limiter>=3.12
+flask-wtf>=1.2.2
+flask-login>=0.6.3
+gunicorn>=23.0.0
+werkzeug>=3.1.3
+
+# Database
+psycopg2-binary>=2.9.10
+sqlalchemy>=2.0.40
+
+# Translation (FREE - no API key needed)
+deep-translator>=1.11.4
+googletrans>=4.0.2
+langdetect>=1.0.9
+
+# Text-to-Speech (FREE - no API key needed)
+gtts>=2.5.4
+
+# Chinese pinyin support
+pypinyin>=0.54.0
+
+# AI Chat (optional - works with Venice AI)
+openai>=1.70.0
+groq>=0.26.0
+mistralai>=1.10.0
+
+# Telegram Bot
+python-telegram-bot>=20.0
+
+# Utilities
+requests>=2.32.3
+email-validator>=2.2.0
+pyjwt>=2.10.1
+beautifulsoup4>=4.13.3
+lxml>=5.4.0
+
+# Audio processing (lightweight)
+pydub>=0.25.1
