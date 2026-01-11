@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNI Grammar System - UNI LINGUS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .grammar-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            margin: 20px;
+            padding: 30px;
+        }
+        
+        .section-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(108, 117, 125, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .section-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            color: #495057;
+            font-weight: 700;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .grammar-rule {
+            background: #ffffff;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .example-text {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-family: monospace;
+            font-weight: 600;
+        }
+        
+        .uni-text {
+            color: #1565c0;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .dialogue-box {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .dialogue-line {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .speaker-a {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+        }
+        
+        .speaker-b {
+            background: rgba(118, 75, 162, 0.1);
+            border-left: 3px solid #764ba2;
+        }
+        
+        .translation {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .verb-table {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .verb-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+        }
+        
+        .verb-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .verb-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .alphabet-display {
+            font-family: monospace;
+            font-size: 1.3em;
+            letter-spacing: 3px;
+            background: #333;
+            color: #4caf50;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .chat-container {
+            background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf6 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .chat-input-group {
+            margin-top: 15px;
+        }
+        
+        .chat-message {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 12px;
+        }
+        
+        .user-message {
+            background: #667eea;
+            color: white;
+            margin-left: 20%;
+        }
+        
+        .ai-message {
+            background: #ffffff;
+            color: #333;
+            margin-right: 20%;
+            border: 1px solid #dee2e6;
+        }
+        
+        .vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .vocab-item {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #ffc107;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        .number-item {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .preposition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        
+        .preposition-item {
+            background: #fce4ec;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+        
+        .btn-uni {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-uni:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .tab-content {
+            padding: 20px 0;
+        }
+        
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .accordion-button:not(.collapsed) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="grammar-container">
+            <div class="text-center mb-4">
+                <h1 class="display-4" style="color: #495057; font-weight: bold;">
+                    UNI LINGUS
+                </h1>
+                <p class="lead" style="color: #6c757d;">
+                    UNI is a simple artificial language. It's much easier to learn and speak than any language you know.
+                </p>
+            </div>
+
+            <ul class="nav nav-pills justify-content-center mb-4 flex-wrap" id="grammarTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="intro-tab" data-bs-toggle="pill" data-bs-target="#intro" type="button">
+                        Introduction
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="alphabet-tab" data-bs-toggle="pill" data-bs-target="#alphabet" type="button">
+                        1. Alphabet
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pronunciation-tab" data-bs-toggle="pill" data-bs-target="#pronunciation" type="button">
+                        2. Pronunciation
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="grammar-tab" data-bs-toggle="pill" data-bs-target="#grammar" type="button">
+                        3. Grammar
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="prepositions-tab" data-bs-toggle="pill" data-bs-target="#prepositions" type="button">
+                        4. Prepositions
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="questions-tab" data-bs-toggle="pill" data-bs-target="#questions" type="button">
+                        5. Questions
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="numbers-tab" data-bs-toggle="pill" data-bs-target="#numbers" type="button">
+                        6. Numbers
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="optional-tab" data-bs-toggle="pill" data-bs-target="#optional" type="button">
+                        7. Optional
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="verbs-tab" data-bs-toggle="pill" data-bs-target="#verbs" type="button">
+                        50 Verbs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="chat-tab" data-bs-toggle="pill" data-bs-target="#chat" type="button">
+                        AI Chat
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="grammarTabContent">
+                
+                <div class="tab-pane fade show active" id="intro" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">Introduction to UNI</h3>
+                        <p class="lead">If you speak any Romanic language you will understand 70% of this dialogue:</p>
+                        
+                        <div class="dialogue-box">
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">OLA, KOMU VIDA? KE NOVU?</span>
+                                <div class="translation">(Hello, how is life? What's new?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">OI, VIDA BONU, MA KOMENSARO ESTUDAR NOVU LINGUA ARTIFISIALU.</span>
+                                <div class="translation">(Hey, life is good, I began to study a new artificial language)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">KE SIGNIFIKAR? LINGUA KONSTRUKTUDU, KOMU ESPERANTA?</span>
+                                <div class="translation">(What does that mean? A constructed language, like Esperanto?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">SIMILU, SI.</span>
+                                <div class="translation">(Similar, yes.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">NO DIFISILU APRENDAR? NORMALU NESESITAR MUITU TEMPA INTENDAR GRAMATIKA, PRONUNSIA, MEMORIZAR FRAZAS NO KONOSUDU?</span>
+                                <div class="translation">(Isn't it difficult to learn? You normally need a lot of time to understand grammar, pronunciation, to memorise unfamiliar phrases?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">REALU NO, VERDA KE NO FALARE RAPIDU MESMU DIA, PERU PODAR ESPLIKAR KOZAS BAZIKU.</span>
+                                <div class="translation">(Not really, the truth is, you won't speak fluently the same day, but you can explain basic things.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">SOLU IN(U) UNA DIA? KOMU POSIBLU?</span>
+                                <div class="translation">(Just in one day? How is this possible)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">PARUKE MUITU PARESADU IDIOMAS ROMANU I KOMU NA JA FALAR ESPANIOLA I PORTUGEZA, SARE MUITU FASILU.</span>
+                                <div class="translation">(Because it's very similar to Romance languages and since you already speak Spanish and Portuguese, It will be very easy.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">LOKU, PERU KE OTRU KOZAS SIMPLIFIKAR PROSESA?</span>
+                                <div class="translation">(Crazy, but what other things simplify the process?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">REGLAS TOTALU MINIMU. NO GENERAS PARU SUSTANTIVAS, SOU NO PREOKUPAR SA KON MASKULINU O FEMININU.</span>
+                                <div class="translation">(The rules are totally minimal. No genders for nouns, so don't worry about masculine or feminine.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">I VERBAS?</span>
+                                <div class="translation">(And verbs?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">KUASU MESMU FASILU. SOLU TRA TEMPAS PRINSIPALU: -AR PREZENTU, -RO PASADU I -RE FUTURU. NO VERBAS NOREGULARU.</span>
+                                <div class="translation">(Almost as easy. Just three principal tenses: -AR present, -RO past and -RE future. No irregular verbs.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">WOW! NO KONJUGARA?</span>
+                                <div class="translation">(Wow! No conjugations?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">EZATU! KOMU NA FALAREBE "She loves to sing"?</span>
+                                <div class="translation">(Exactly! How would you say "She loves to sing"?)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">TA AMAR KANTAR.</span>
+                                <div class="translation">(She loves to sing.)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">KOREKTU! NA JA PRAKTIKU NATIVU!</span>
+                                <div class="translation">(Correct! You are already practically a native!)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-a">
+                                <strong>A:</strong> <span class="uni-text">DEFINITIVU FASILITAR KOMUNIKA. KERAR PRAKTIKAR PROKSIMA SEMANA! DIVERTANDU!</span>
+                                <div class="translation">(It definitely facilitates communication. I want to practice next week! It's entertaining!)</div>
+                            </div>
+                            
+                            <div class="dialogue-line speaker-b">
+                                <strong>B:</strong> <span class="uni-text">VERAR NA MANIANA!</span>
+                                <div class="translation">(I'll see you tomorrow!)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="alphabet" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">1. Simplified Alphabet</h3>
+                        
+                        <div class="grammar-rule">
+                            <p>There are only <strong>21 letters</strong> in full version and <strong>15 letters</strong> in simplified (whisper) version where voiced consonants are substituted with their voiceless equivalents.</p>
+                            <p>UNI is a <strong>UNICASE</strong> language which means all letters are typographically the same regardless of size. We use ALL CAPS for now.</p>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <strong>English Alphabet (26 letters):</strong>
+                            <div class="alphabet-display">A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <strong>UNI Full Alphabet (5 Vowels + 16 Consonants = 21 letters):</strong>
+                            <div class="alphabet-display" style="color: #4caf50;">A B - D E F G - I J K L M N O P - R S T U V - X - Z</div>
+                            <p class="mt-2 text-muted">Letters C, H, Q, W and Y don't exist in UNI. They're not necessary and introduce confusion.</p>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <strong>UNI Whisper Version (5 Vowels + 10 Consonants = 15 letters):</strong>
+                            <div class="alphabet-display" style="color: #ff9800;">A - - - E F - - I - K L M N O P - R S T U - - X - -</div>
+                            <p class="mt-2 text-muted">(- means the corresponding letter doesn't exist)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="pronunciation" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">2. Simplified Pronunciation</h3>
+                        
+                        <div class="grammar-rule">
+                            <p>UNI has a <strong>phonetic spelling system</strong>, so every letter is pronounced the same way as it's written, no matter where it appears in a word.</p>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Vowels: A O U E I</h5>
+                            <ul>
+                                <li><strong>A</strong> as in f<u>a</u>ther, r<u>a</u>ther</li>
+                                <li><strong>E</strong> as in m<u>e</u>t, p<u>e</u>t</li>
+                                <li><strong>I</strong> as in mach<u>i</u>ne, mar<u>i</u>ne</li>
+                                <li><strong>O</strong> as in f<u>o</u>r, sp<u>o</u>rt</li>
+                                <li><strong>U</strong> as in r<u>u</u>le, b<u>u</u>ll</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Whisper Version - Voiced to Voiceless:</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul>
+                                        <li><strong>B → P</strong> (B as in Barbara, P as in Peter)</li>
+                                        <li><strong>D → T</strong> (D as in down, T as in top)</li>
+                                        <li><strong>G → K</strong> (G as in green, K as in kind)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul>
+                                        <li><strong>J → X</strong> (J as in measure, X as in short)</li>
+                                        <li><strong>V → F</strong> (V as in very, F as in fine)</li>
+                                        <li><strong>Z → S</strong> (Z as in zero, S as in smart)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Unchanged Letters (no voiceless equivalents):</h5>
+                            <p>L (as in later), M (as in meter), N (as in normal), R (as in robot)</p>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Whisper Examples:</h5>
+                            <div class="example-text">KOZA BAZIKU → KOSA BASIKU</div>
+                            <div class="example-text">PORTUGESA → PORTUKESA</div>
+                            <div class="example-text">VIDA NOVU → FITA NOFU</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="grammar" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">3. Simplified Grammar System</h3>
+                        <p class="lead">Only 3 tenses, no genders, cases or irregular verbs!</p>
+                        
+                        <div class="accordion" id="grammarAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#verbTenses">
+                                        Verb Tenses
+                                    </button>
+                                </h2>
+                                <div id="verbTenses" class="accordion-collapse collapse show" data-bs-parent="#grammarAccordion">
+                                    <div class="accordion-body">
+                                        <table class="table verb-table">
+                                            <thead>
+                                                <tr><th>Tense</th><th>Suffix</th><th>Example (LIBERAR = to liberate)</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>Present</td><td>-AR</td><td>MA LIBERAR (I liberate)</td></tr>
+                                                <tr><td>Past</td><td>-RO</td><td>MA LIBERARO (I liberated)</td></tr>
+                                                <tr><td>Future</td><td>-RE</td><td>MA LIBERARE (I will liberate)</td></tr>
+                                                <tr><td>Conditional</td><td>-REBE</td><td>MA LIBERAREBE (I would liberate)</td></tr>
+                                                <tr><td>Continuous</td><td>-ANDU</td><td>MA LIBERARANDU (I am liberating)</td></tr>
+                                                <tr><td>Imperative</td><td>-RI</td><td>LIBERARI! (Liberate!)</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#wordFormation">
+                                        Word Formation (using AMOR = love)
+                                    </button>
+                                </h2>
+                                <div id="wordFormation" class="accordion-collapse collapse" data-bs-parent="#grammarAccordion">
+                                    <div class="accordion-body">
+                                        <table class="table verb-table">
+                                            <thead>
+                                                <tr><th>Form</th><th>Suffix</th><th>Example</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>Noun</td><td>-A</td><td>AMORA (love)</td></tr>
+                                                <tr><td>Verb</td><td>-AR</td><td>AMORAR/AMAR (to love)</td></tr>
+                                                <tr><td>Active Gerund</td><td>-ANDU</td><td>AMANDU (loving, lover)</td></tr>
+                                                <tr><td>Passive Gerund</td><td>-UNDU</td><td>AMUNDU (being loved)</td></tr>
+                                                <tr><td>Adjective</td><td>-U</td><td>AMORU (lovable, lovely)</td></tr>
+                                                <tr><td>Active Adverb</td><td>-ARU</td><td>AMORARU (lovingly)</td></tr>
+                                                <tr><td>Passive Adverb</td><td>-ADU/-UDU</td><td>AMADU/AMUDU (loved, beloved)</td></tr>
+                                                <tr><td>Diminutive</td><td>-ITA/-SITA</td><td>AMORITA/AMORSITA</td></tr>
+                                            </tbody>
+                                        </table>
+                                        <p class="text-muted mt-2">*Adverbs are not obligatory. Adjectives can be used instead.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#nouns">
+                                        Nouns (No Gender!)
+                                    </button>
+                                </h2>
+                                <div id="nouns" class="accordion-collapse collapse" data-bs-parent="#grammarAccordion">
+                                    <div class="accordion-body">
+                                        <p>All nouns regardless of gender end in <strong>-A</strong> (singular) and <strong>-AS</strong> (plural).</p>
+                                        <div class="example-text">UMANA (human) | PLANETAS (planets) | UNIVERSA (universe)</div>
+                                        <div class="example-text">LIBRA (book) → LIBRAS (books)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pronouns">
+                                        Pronouns
+                                    </button>
+                                </h2>
+                                <div id="pronouns" class="accordion-collapse collapse" data-bs-parent="#grammarAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Personal Pronouns:</h6>
+                                        <div class="row mb-3">
+                                            <div class="col-6">
+                                                <div class="example-text">I - MA | We - MAS</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="example-text">You - NA | You (pl) - NAS</div>
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <div class="example-text">He/She/It - TA | They - TAS</div>
+                                                <small class="text-muted">TA is borrowed from Chinese where it's pronounced the same for men and women</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <h6>Possessive Pronouns:</h6>
+                                        <div class="example-text">My - MAU | Your - NAU | His/Her/Its - TAU</div>
+                                        <div class="example-text">Our - MAUS | Yours - NAUS | Theirs - TAUS</div>
+                                        
+                                        <h6 class="mt-3">Special Forms:</h6>
+                                        <ul>
+                                            <li><strong>Reflexive:</strong> -SA for self → TA AMAR SA (She loves herself)</li>
+                                            <li><strong>Reciprocal:</strong> UNA OTRA → TAS AMAR UNA OTRA (They love each other)</li>
+                                            <li><strong>Comparison:</strong> BONU, PLU BONU, PLUS BONU (good, better, best)</li>
+                                            <li><strong>Negation:</strong> NO before word → NO MALU (not bad)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#wordOrder">
+                                        Word Order (SVO)
+                                    </button>
+                                </h2>
+                                <div id="wordOrder" class="accordion-collapse collapse" data-bs-parent="#grammarAccordion">
+                                    <div class="accordion-body">
+                                        <p>UNI has flexible word order but defaults to <strong>SVO (Subject-Verb-Object)</strong> like English/Chinese.</p>
+                                        <div class="example-text">
+                                            English: The cat eats the fish.<br>
+                                            Chinese: MaoChiYu (Cat eat fish)<br>
+                                            <span class="uni-text">UNI: KATA KOMAR PESKA</span> (Cat eat fish)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="prepositions" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">4. Simplified Prepositions</h3>
+                        
+                        <div class="grammar-rule">
+                            <h5>Basic Connectors:</h5>
+                            <div class="preposition-grid">
+                                <div class="preposition-item"><strong>Or:</strong> O</div>
+                                <div class="preposition-item"><strong>And:</strong> I</div>
+                                <div class="preposition-item"><strong>Of:</strong> DU</div>
+                                <div class="preposition-item"><strong>So:</strong> SOU</div>
+                                <div class="preposition-item"><strong>As:</strong> KOMU</div>
+                                <div class="preposition-item"><strong>For:</strong> PARU</div>
+                                <div class="preposition-item"><strong>But:</strong> PERU</div>
+                                <div class="preposition-item"><strong>By/Through:</strong> PORU</div>
+                                <div class="preposition-item"><strong>Although:</strong> EMBORU</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Position/Direction (with NO- negation pattern):</h5>
+                            <div class="preposition-grid">
+                                <div class="preposition-item"><strong>If/Unless:</strong> SE / A MENUS SE</div>
+                                <div class="preposition-item"><strong>At:</strong> ATU</div>
+                                <div class="preposition-item"><strong>In/Out:</strong> INU / NOINU (FORU)</div>
+                                <div class="preposition-item"><strong>To/From:</strong> A / DA</div>
+                                <div class="preposition-item"><strong>With/Without:</strong> KONU / NOKONU (SENU)</div>
+                                <div class="preposition-item"><strong>Left/Right:</strong> LETU / NOLETU (RETU)</div>
+                                <div class="preposition-item"><strong>Down/Up:</strong> BAXU / NOBAXU (SIMU)</div>
+                                <div class="preposition-item"><strong>Under/Over:</strong> SUBU / NOSUBU (SUPERU)</div>
+                                <div class="preposition-item"><strong>Since/Until:</strong> DEZDU / ATU</div>
+                                <div class="preposition-item"><strong>About/Around:</strong> SOBRU / REDORU</div>
+                                <div class="preposition-item"><strong>Before/After:</strong> ANTU / NOANTU (DEPU)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="questions" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">5. Simplified Questions</h3>
+                        
+                        <div class="grammar-rule">
+                            <h5>Yes/No Questions:</h5>
+                            <p>Formed by adding optional <strong>KA</strong> at the beginning or end, or just using intonation.</p>
+                            <div class="example-text">
+                                (KA) NA AMORAR MA? - Do you love me?<br>
+                                NA AMAR MA KA? - Do you love me?
+                            </div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Wh-Questions (Interrogative Pronouns):</h5>
+                            <div class="preposition-grid">
+                                <div class="preposition-item"><strong>What:</strong> KE</div>
+                                <div class="preposition-item"><strong>Who:</strong> KEN</div>
+                                <div class="preposition-item"><strong>Which:</strong> KUALU</div>
+                                <div class="preposition-item"><strong>When:</strong> KUANDU</div>
+                                <div class="preposition-item"><strong>Where:</strong> KONDE</div>
+                                <div class="preposition-item"><strong>Why:</strong> PARU KE</div>
+                                <div class="preposition-item"><strong>How:</strong> KOMU</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="numbers" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">6. Simplified Numbers</h3>
+                        
+                        <div class="grammar-rule">
+                            <h5>Cardinal Numbers (0-10):</h5>
+                            <div class="number-grid">
+                                <div class="number-item">0: NULA</div>
+                                <div class="number-item">1: UNA</div>
+                                <div class="number-item">2: DUA</div>
+                                <div class="number-item">3: TRA</div>
+                                <div class="number-item">4: KUATRA</div>
+                                <div class="number-item">5: SINKA</div>
+                                <div class="number-item">6: SESA</div>
+                                <div class="number-item">7: SETA</div>
+                                <div class="number-item">8: OKTA</div>
+                                <div class="number-item">9: NOVA</div>
+                                <div class="number-item">10: DEKA</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Larger Numbers:</h5>
+                            <div class="number-grid">
+                                <div class="number-item">100: SENTA</div>
+                                <div class="number-item">1000: MILA</div>
+                                <div class="number-item">1M: MILIONA</div>
+                            </div>
+                            <h6 class="mt-3">Compound Examples:</h6>
+                            <div class="example-text">
+                                11-19: DEKA-UNA, DEKA-DUA, etc.<br>
+                                20: DUA-DEKA | 30: TRA-DEKA<br>
+                                21: DUA-DEKA-UNA | 123: SENTA-DUA-TRA<br>
+                                2025: DUA-MILA-SENTA-DUA-DEKA
+                            </div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Ordinal Numbers (add -U):</h5>
+                            <div class="example-text">UNU (first) | DUU (second) | TRU (third) | DEKA-UNU (eleventh)</div>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Fractions (add -DA):</h5>
+                            <div class="example-text">DUADA (half) | TRADA (third) | KUATRADA (quarter)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="optional" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">7. Optional Elements</h3>
+                        <p class="lead">These are only used if absolutely necessary:</p>
+                        
+                        <div class="grammar-rule">
+                            <ul>
+                                <li><strong>Adverbs -RU:</strong> To go quick(ly) - ANDAR RAPIDU(RU)</li>
+                                <li><strong>Definite article (the):</strong> -LA → (LA) KATA = The cat</li>
+                                <li><strong>Indefinite article (a/an):</strong> -UNA → (UNA) KATA = A cat</li>
+                                <li><strong>Verb "to be" (SAR):</strong> It's a cat - TA (SAR) (UNA) KATA</li>
+                                <li><strong>Tense suffixes with time words:</strong> MANIANA MA ANDAR(E) SKOLA (Tomorrow I'll go to school)</li>
+                                <li><strong>Here/There:</strong> ALI/AKI (SAR) (UNA) LIBRA (Here/There is a book)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="grammar-rule">
+                            <h5>Full vs Simplified Example:</h5>
+                            <div class="example-text">
+                                <strong>Full:</strong> (LA) KATA VERANDU (AT) (UNA) KATA PERU TA NO SEGURU SE TA (SAR) (UNA) KATA.<br>
+                                <strong>Simplified:</strong> KATA VERAR KATA PERU NO SEGURU SE TA KATA.<br>
+                                <em>(The cat is looking at a cat but it is not sure if it's a cat)</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="verbs" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">50 Most Common Verbs - Multilingual Comparison</h3>
+                        
+                        <div class="table-responsive">
+                            <table class="table verb-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>English</th>
+                                        <th>UNI Verb</th>
+                                        <th>UNI Example</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>1</td><td>to be</td><td>SAR</td><td>MA ESTUDIANTA (I am a student)</td></tr>
+                                    <tr><td>2</td><td>to have</td><td>TENAR</td><td>MA TENAR LIBRA (I have a book)</td></tr>
+                                    <tr><td>3</td><td>to do</td><td>FAR</td><td>MA FAR LABORA (I do my work)</td></tr>
+                                    <tr><td>4</td><td>to say</td><td>DIZAR</td><td>MA DIZAR PALAVRA (I say a word)</td></tr>
+                                    <tr><td>5</td><td>to go</td><td>ANDAR</td><td>MA ANDAR SKOLA (I go to school)</td></tr>
+                                    <tr><td>6</td><td>to get</td><td>OBTAR</td><td>MA OBTAR REGALA (I get a gift)</td></tr>
+                                    <tr><td>7</td><td>to make</td><td>FAZAR</td><td>MA FAZAR BOLA (I make a cake)</td></tr>
+                                    <tr><td>8</td><td>to know</td><td>SABAR</td><td>MA SABAR FAKTA (I know a fact)</td></tr>
+                                    <tr><td>9</td><td>to think</td><td>PENSAR</td><td>MA PENSAR SOBRU VIDA (I think about life)</td></tr>
+                                    <tr><td>10</td><td>to take</td><td>TOMAR</td><td>MA TOMAR LIBRA (I take a book)</td></tr>
+                                    <tr><td>11</td><td>to see</td><td>VERAR</td><td>MA VERAR ESTRELA (I see a star)</td></tr>
+                                    <tr><td>12</td><td>to come</td><td>VENAR</td><td>MA VENAR FESTA (I come to the party)</td></tr>
+                                    <tr><td>13</td><td>to want</td><td>KERAR</td><td>MA KERAR KAFA (I want a coffee)</td></tr>
+                                    <tr><td>14</td><td>to use</td><td>UZAR</td><td>MA UZAR BOLIGRAFA (I use a pen)</td></tr>
+                                    <tr><td>15</td><td>to find</td><td>ENKONTRAR</td><td>MA ENKONTRAR XAVA (I find a key)</td></tr>
+                                    <tr><td>16</td><td>to give</td><td>DAR</td><td>MA DAR FLORA (I give a flower)</td></tr>
+                                    <tr><td>17</td><td>to tell</td><td>KONTAR</td><td>MA KONTAR ISTORIA (I tell a story)</td></tr>
+                                    <tr><td>18</td><td>to work</td><td>LABORAR</td><td>MA LABORAR INU OFISA (I work in an office)</td></tr>
+                                    <tr><td>19</td><td>to call</td><td>XAMAR</td><td>MA XAMAR AMIGA (I call my friend)</td></tr>
+                                    <tr><td>20</td><td>to try</td><td>PROVAR</td><td>MA PROVAR KOMIDA NOVU (I try new food)</td></tr>
+                                    <tr><td>21</td><td>to ask</td><td>PREGUNTAR</td><td>MA PREGUNTAR PREGUNTA (I ask a question)</td></tr>
+                                    <tr><td>22</td><td>to need</td><td>NESESITAR</td><td>MA NESESITAR LIBRA (I need a book)</td></tr>
+                                    <tr><td>23</td><td>to feel</td><td>SENTIRAR</td><td>MA SENTIRAR FELIZU (I feel happy)</td></tr>
+                                    <tr><td>24</td><td>to become</td><td>TORNAR</td><td>MA TORNAR PROFESORA (I become a teacher)</td></tr>
+                                    <tr><td>25</td><td>to leave</td><td>DEXAR</td><td>MA DEXAR KAZA (I leave the house)</td></tr>
+                                    <tr><td>26</td><td>to put</td><td>KOLOKAR</td><td>MA KOLOKAR LIBRA INU MEZA (I put a book on the table)</td></tr>
+                                    <tr><td>27</td><td>to keep</td><td>MANTENAR</td><td>MA MANTENAR PROMESA (I keep my promise)</td></tr>
+                                    <tr><td>28</td><td>to let</td><td>DEXAR</td><td>MA DEXAR TA ANDAR (I let her go)</td></tr>
+                                    <tr><td>29</td><td>to type</td><td>DIJITAR</td><td>TA KERAR MA DIJITAR (She wants me to type)</td></tr>
+                                    <tr><td>30</td><td>to begin</td><td>KOMENSAR</td><td>MA KOMENSAR PROJEKTA NOVU (I begin a new project)</td></tr>
+                                    <tr><td>31</td><td>to write</td><td>SKRIBAR</td><td>MA SKRIBAR LETRA (I write a letter)</td></tr>
+                                    <tr><td>32</td><td>to read</td><td>LAR</td><td>TA LAR LIBRA (She reads a book)</td></tr>
+                                    <tr><td>33</td><td>to eat</td><td>KOMAR</td><td>MAS KOMAR MANSANA (We eat an apple)</td></tr>
+                                    <tr><td>34</td><td>to drink</td><td>BEBAR</td><td>TA BEBAR AGUA (He drinks water)</td></tr>
+                                    <tr><td>35</td><td>to listen</td><td>ESKUTAR</td><td>TAS ESKUTAR MUZIKA (They listen to music)</td></tr>
+                                    <tr><td>36</td><td>to watch</td><td>VERAR</td><td>MA VERAR FILMA (I watch a movie)</td></tr>
+                                    <tr><td>37</td><td>to play</td><td>JOGAR</td><td>NINAS JOGAR FUTBOLA (The children play soccer)</td></tr>
+                                    <tr><td>38</td><td>to buy</td><td>KOMPRAR</td><td>TA KOMPRAR VESTIDA (She buys a dress)</td></tr>
+                                    <tr><td>39</td><td>to sell</td><td>VENDAR</td><td>TA VENDAR AUTA (He sells a car)</td></tr>
+                                    <tr><td>40</td><td>to drive</td><td>KONDUKTAR</td><td>MA KONDUKTAR AUTA (I drive a car)</td></tr>
+                                    <tr><td>41</td><td>to love</td><td>AMAR</td><td>TAS AMAR UNA OTRA (They love each other)</td></tr>
+                                    <tr><td>42</td><td>to help</td><td>AJUDAR</td><td>TA AJUDAR AMIGA (She helps her friend)</td></tr>
+                                    <tr><td>43</td><td>to learn</td><td>APRENDAR</td><td>MAS APRENDAR KOZAS NOVU (We learn new things)</td></tr>
+                                    <tr><td>44</td><td>to teach</td><td>ENSENAR</td><td>TA ENSENAR INGLEZA (He teaches English)</td></tr>
+                                    <tr><td>45</td><td>to build</td><td>KONSTRUKTAR</td><td>TAS KONSTRUKTAR KAZA (They build a house)</td></tr>
+                                    <tr><td>46</td><td>to send</td><td>ENVIAR</td><td>MA ENVIAR MESAJA (I send a message)</td></tr>
+                                    <tr><td>47</td><td>to receive</td><td>RESIBIR</td><td>TA RESIBIR REGALA (She receives a gift)</td></tr>
+                                    <tr><td>48</td><td>to run</td><td>KORAR</td><td>NA KORAR RAPIDU (You run fast)</td></tr>
+                                    <tr><td>49</td><td>to swim</td><td>NADAR</td><td>MAS NADAR INU MARA (We swim in the sea)</td></tr>
+                                    <tr><td>50</td><td>to sleep</td><td>DORMAR</td><td>TA DORMAR BONU (He sleeps well)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="chat" role="tabpanel">
+                    <div class="section-card">
+                        <h3 class="section-title">UNI Grammar AI Assistant</h3>
+                        <p class="text-muted">Chat with AI about UNI grammar rules, ask for translations, or get help with corrections.</p>
+                        
+                        <div class="chat-container" id="chatContainer">
+                            <div class="chat-message ai-message">
+                                <strong>UNI AI:</strong> OLA! I'm your UNI grammar assistant. Ask me anything about UNI language rules, translations, or grammar. For example: "How do I conjugate verbs?" or "Translate 'I love you' to UNI".
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-group">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="chatInput" placeholder="Ask about UNI grammar, request translations, or get help..." 
+                                       onkeypress="if(event.key==='Enter') sendChatMessage()">
+                                <button class="btn btn-uni" type="button" onclick="sendChatMessage()">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-action">
+        <button class="btn btn-uni btn-lg rounded-circle" onclick="window.location.href='/'" title="Back to Translator">
+            Home
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addChatMessage(message, 'user');
+            input.value = '';
+            
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'chat-message ai-message';
+            loadingDiv.innerHTML = '<strong>UNI AI:</strong> <em>Thinking...</em>';
+            loadingDiv.id = 'loading-message';
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: `You are a UNI language expert with complete knowledge of UNI grammar rules. ${message}`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const loading = document.getElementById('loading-message');
+                if (loading) loading.remove();
+                
+                if (data.success) {
+                    addChatMessage(data.response, 'ai');
+                } else {
+                    addChatMessage('Sorry, I encountered an error. Please try again.', 'ai');
+                }
+            })
+            .catch(error => {
+                console.error('Chat error:', error);
+                const loading = document.getElementById('loading-message');
+                if (loading) loading.remove();
+                addChatMessage('Sorry, I encountered an error. Please try again.', 'ai');
+            });
+        }
+
+        function addChatMessage(message, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `<strong>You:</strong> ${message}`;
+            } else {
+                messageDiv.innerHTML = `<strong>UNI AI:</strong> ${message}`;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+    </script>
+</body>
+</html>
